@@ -4,8 +4,8 @@ project(RadikChat LANGUAGES C)
 add_executable(client)
 add_executable(server)
 
-target_sources(client PRIVATE src/client.c)
-target_sources(server PRIVATE src/server.c)
+target_sources(client PRIVATE src/client.c src/network_manager.c)
+target_sources(server PRIVATE src/server.c src/network_manager.c)
 
 include_directories("include/")
 

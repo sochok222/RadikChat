@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <winsock2.h>
+#include <debug.h>
+#include <network_manager.h>
 #include <ws2tcpip.h>
 
 #define ADDRESS_LEN 64
@@ -28,39 +30,7 @@ int main(void)
 		return 1;
 	}
 
-	printf("Configuring server address...\n");
-	memset(&hints, 0, sizeof(hints));
-	hints.ai_socktype = SOCK_STREAM;	// Setting TCP connection type
-	hints.ai_family = AF_INET; 		// socket will have ipv4 type
-	hints.ai_flags = AI_PASSIVE;		// socket will be used for bind 
-	if (getaddrinfo(NULL, service, &hints, &bind_address) != 0) {
-		fprintf(stderr, "Error: getaddrinfo() failed. Error code: (%d)\n", WSAGetLastError());
-		WSACleanup();
-		return 1;
-	}
-
-	printf("Creating socket...\n");
-	if ((socket_listen = socket(bind_address->ai_family, bind_address->ai_socktype, bind_address->ai_protocol)) == INVALID_SOCKET) {
-		fprintf(stderr, "Error: socket() failed. Error code: (%d)\n", WSAGetLastError());
-		WSACleanup();
-		return 1;
-	}
-
-	printf("Binding socket...\n");
-	if (bind(socket_listen, bind_address->ai_addr, bind_address->ai_addrlen) != 0) {
-		fprintf(stderr, "Error: bind() failed. Error code: (%d)\n", WSAGetLastError());
-		closesocket(socket_listen);
-		WSACleanup();
-		return 1;
-	}
-	freeaddrinfo(bind_address);
-
-	if (listen(socket_listen, 10) != 0) {
-		fprintf(stderr, "Error: listen() failed. Error code: (%d)\n", WSAGetLastError());
-		closesocket(socket_listen);
-		WSACleanup();
-		return 1;
-	}
+	socket_listen = create_server_socket(service, SOCK_STREAM, AF_INET, 10);
 
 	FD_ZERO(&fd_master);
 	FD_SET(socket_listen, &fd_master);
@@ -74,7 +44,7 @@ int main(void)
 			return 1;
 		}
 		for (i = 0; i < fd_reads.fd_count; i++) {
-			if (FD_ISSET(i, &fd_reads)) {
+			if (FD_ISSET(fd_reads.fd_array[i], &fd_reads)) {
 				sockaddr_size = sizeof(client_address);
 				socket_client = accept(socket_listen, (struct sockaddr*)&socket_client, &sockaddr_size);
 				FD_SET(socket_client, &fd_master);

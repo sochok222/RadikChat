@@ -2,6 +2,8 @@
 #include <client.h>
 #include <winsock2.h> /* socket ... */
 #include <ws2tcpip.h> /* getaddrinfo ... */
+#include <debug.h>
+#include <network_manager.h>
 
 #define ADDRESS_LEN 64
 #define SERVICE_LEN 64
@@ -32,28 +34,8 @@ int main(void)
 		return 1;
 	}
 
-	memset(&hints, 0, sizeof(hints));
-	hints.ai_socktype = SOCK_STREAM; // Setting TCP connection type
-	hints.ai_flags = AI_NUMERICHOST; // Address must be numeric string
-	if (getaddrinfo(address, service, &hints, &server_address) != 0) {
-		fprintf(stderr, "Error: getaddrinfo() failed. Error code: (%d)\n", WSAGetLastError());
-		WSACleanup();
-		return 1;
-	}
-
-	if ((socket_server = socket(server_address->ai_family, server_address->ai_socktype, 
-				    server_address->ai_protocol)) == INVALID_SOCKET) {
-		fprintf(stderr, "Error: socket() failed. Error code: (%d)\n", WSAGetLastError());
-		WSACleanup();
-		return 1;
-	}
-	if (connect(socket_server, server_address->ai_addr, server_address->ai_addrlen) != 0) {
-		fprintf(stderr, "Error: connect() failed. Error code: (%d)\n", WSAGetLastError());
-		WSACleanup();
-		return 1;
-	}
-	freeaddrinfo(server_address);
-	printf("Successfully connected to server\nExiting\n");
+	socket_server = create_client_socket(address, service, SOCK_STREAM);
+	printf("sucessfully connected\n");
 
 	if (closesocket(socket_server) == SOCKET_ERROR) {
 		fprintf(stderr, "Error: closesocket() failed. Error code: (%d)\n", WSAGetLastError());
