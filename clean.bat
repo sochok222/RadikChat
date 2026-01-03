@@ -1,0 +1,3 @@
+@echo off
+echo Cleaning build directory...
+if exist build\ rd build /s /q

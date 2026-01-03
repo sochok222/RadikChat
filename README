@@ -1,1 +1,2 @@
 RadikChat is simple client-server chat.
+To see all available presets: cmake --list-presets all
