@@ -30,7 +30,7 @@ int main(void)
 		return 1;
 	}
 
-	socket_listen = create_server_socket(service, SOCK_STREAM, AF_INET, 10);
+	socket_listen = create_passive_socket(service, SOCK_STREAM, AF_INET, 10);
 
 	FD_ZERO(&fd_master);
 	FD_SET(socket_listen, &fd_master);

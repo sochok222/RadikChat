@@ -4,7 +4,7 @@
 #include <ws2tcpip.h>
 #include <stdio.h>
 
-PUBLIC SOCKET create_server_socket(const char *port, const int socktype, const int family, const int backlog)
+PUBLIC SOCKET create_passive_socket(const char *port, const int socktype, const int family, const int backlog)
 {
 	struct addrinfo hints, *bind_address = NULL;
 	SOCKET socket_listen;
@@ -58,7 +58,7 @@ failure:
 
 
 
-PUBLIC SOCKET create_client_socket(const char *host, const char *port, const int socktype)
+PUBLIC SOCKET create_active_socket(const char *host, const char *port, const int socktype)
 {
 	struct addrinfo hints, *peer_address = NULL;
 	SOCKET socket_peer;

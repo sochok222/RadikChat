@@ -8,6 +8,8 @@
 #define ADDRESS_LEN 64
 #define SERVICE_LEN 64
 
+
+
 int main(void) 
 {
 	WSADATA wsadata;
@@ -34,7 +36,10 @@ int main(void)
 		return 1;
 	}
 
-	socket_server = create_client_socket(address, service, SOCK_STREAM);
+	socket_server = create_active_socket(address, service, SOCK_STREAM);
+	if (socket_server == INVALID_SOCKET) {
+		PRINT_WSA_ERROR(WSAGetLastError());
+	}
 	printf("sucessfully connected\n");
 
 	if (closesocket(socket_server) == SOCKET_ERROR) {
