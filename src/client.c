@@ -9,7 +9,6 @@
 #define SERVICE_LEN 64
 
 
-
 int main(void) 
 {
 	WSADATA wsadata;
@@ -17,21 +16,21 @@ int main(void)
 	char address[ADDRESS_LEN+1], service[SERVICE_LEN+1];
 	SOCKET socket_server;
 
-	printf("Initializing winsock...\n");
+	DBG_DEBUG("Initializing winsock...\n");
 	if (WSAStartup(MAKEWORD(2, 2), &wsadata) != 0) {
-		fprintf(stderr, "Error: Failed to initialize winsock\n");
+		DBG_FATAL("Error: Failed to initialize winsock\n");
 		return 1;
 	}
 
 	printf("Enter address: ");
 	if (scanf("%s", address) != 1) {
-		fprintf(stderr, "Error: Failed to read address\n");
+		DBG_FATAL("Error: Failed to read address\n");
 		WSACleanup();
 		return 1;
 	}
 	printf("Enter service: ");
 	if (scanf("%s", service) != 1) {
-		fprintf(stderr, "Error: Failed to read service\n");
+		DBG_FATAL("Error: Failed to read service\n");
 		WSACleanup();
 		return 1;
 	}
@@ -40,10 +39,10 @@ int main(void)
 	if (socket_server == INVALID_SOCKET) {
 		PRINT_WSA_ERROR(WSAGetLastError());
 	}
-	printf("sucessfully connected\n");
+	DBG_INFO("sucessfully connected\n");
 
 	if (closesocket(socket_server) == SOCKET_ERROR) {
-		fprintf(stderr, "Error: closesocket() failed. Error code: (%d)\n", WSAGetLastError());
+		DBG_ERROR("Error: closesocket() failed. Error code: (%d)\n", WSAGetLastError());
 		WSACleanup();
 		return 1;
 	}
