@@ -13,9 +13,12 @@
 
 #ifndef NO_DEBUG_BUILD 
 
-#if DEBUG_LEVEL >= 4
+#if DEBUG_LEVEL >= 5
 #define DBG_DEBUG(...)\
-	log_message(DBG_MODE_DEBUG, "[DEBUG]: %s(): ", __FUNCTION__, __LINE__);\
+	log_message(DBG_MODE_DEBUG, "[TRACE]: %s(): ", __FUNCTION__, __LINE__);\
+	log_message(DBG_MODE_DEBUG, __VA_ARGS__);
+#elif DEBUG_LEVEL >= 4
+#define DBG_DEBUG(...)\
 	log_message(DBG_MODE_DEBUG, __VA_ARGS__);
 #else
 #define DBG_DEBUG(...)

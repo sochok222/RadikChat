@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.28)
 project(RadikChat LANGUAGES C)
 
-add_executable(client)
+add_executable(client WIN32)
 add_executable(server)
 
 target_sources(client PRIVATE src/client.c src/network_manager.c src/debug.c)

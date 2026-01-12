@@ -10,18 +10,25 @@
 int main(void) 
 {
 	WSADATA wsadata;
-	struct addrinfo hints, *bind_address = NULL;
 	struct sockaddr_storage client_address;
 	char address[ADDRESS_LEN+1], service[SERVICE_LEN+1];
 	SOCKET socket_listen, socket_client;
 	fd_set fd_master, fd_reads;
+	char *read_buffer;
 	int i, sockaddr_size;
+
+	int bytes_received;
+	read_buffer = malloc(sizeof(*read_buffer) * 1024);
+	if (read_buffer == NULL)
+		printf("Cant alloc for read buffer\n");
 
 	printf("Initializing winsock...\n");
 	if (WSAStartup(MAKEWORD(2, 2), &wsadata) != 0) {
 		fprintf(stderr, "Error: Failed to initialize winsock\n");
 		return 1;
 	}
+
+	AllocConsole();
 
 	printf("Enter service: ");
 	if (scanf("%s", service) != 1) {
@@ -44,11 +51,23 @@ int main(void)
 			return 1;
 		}
 		for (i = 0; i < fd_reads.fd_count; i++) {
-			if (FD_ISSET(fd_reads.fd_array[i], &fd_reads)) {
+			if (fd_reads.fd_array[i] == socket_listen) {
 				sockaddr_size = sizeof(client_address);
-				socket_client = accept(socket_listen, (struct sockaddr*)&socket_client, &sockaddr_size);
+				socket_client = accept(socket_listen, (struct sockaddr*)&client_address, &sockaddr_size);
+				if (socket_client == INVALID_SOCKET)
+					printf("INVALID\n");
 				FD_SET(socket_client, &fd_master);
 				printf("Client connected.\n");
+			} else {
+				bytes_received = recv(fd_reads.fd_array[i], read_buffer, 1024, 0);
+				if (bytes_received < 1) {
+					FD_CLR(i, &fd_master);
+					closesocket(i);
+					return 0;
+					continue;
+				}
+
+				printf("%.*s", bytes_received, read_buffer);
 			}
 		}
 	}
