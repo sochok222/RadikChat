@@ -28,7 +28,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hInstPrev, LPSTR lpCmdLine, in
 
 	if (!init_debug())
 		return 0;
-	DBG_FATAL("Debug test\n");
 
 	if (!RegisterClass(&wc)) {
 		DBG_FATAL("Failed to register window class\n");
