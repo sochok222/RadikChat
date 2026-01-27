@@ -1,4 +1,3 @@
-#define DEBUG_TO_CONSOLE
 #include <stdio.h>
 #include <client.h>
 #include <winsock2.h> 
@@ -10,6 +9,7 @@
 #include <windows.h>
 
 #include <network_manager.h>
+#include <mainwindow.h>
 
 #define SERVER_ADDR "192.168.0.184"
 #define SERVER_PORT "8899"
@@ -26,25 +26,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hInstPrev, LPSTR lpCmdLine, in
 	wc.hInstance = hInstance;
 	wc.lpszClassName = "RadikChat";
 
-	if (!init_debug())
+	if (!INIT_DEBUG())
 		return 0;
-	DBG_FATAL("Debug test\n");
 
 	if (!RegisterClass(&wc)) {
 		DBG_FATAL("Failed to register window class\n");
 	}
 
-	hwnd = CreateWindowA(
-			"RadikChat",
-			"RadikChat",
-			WS_OVERLAPPEDWINDOW,
-			CW_USEDEFAULT, CW_USEDEFAULT, /* Initial position of the window */
-			CW_USEDEFAULT, CW_USEDEFAULT, /* Initial size of the window */
-			NULL,
-			NULL,
-			hInstance,
-			NULL
-	);
+	hwnd = create_main_window("RadikChat", "RadikChat", hInstance);
 
 	if (hwnd == NULL) {
 		DBG_FATAL("Failed to create window\n");

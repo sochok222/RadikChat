@@ -5,13 +5,14 @@
 #include <stdbool.h>
 
 /************************************************ 
- * This module created for colorful debugging	*
+ * This translation unit created for colorful	*
+ * debugging					*
  ************************************************/
 
 #define PRIVATE static
 #define PUBLIC
 
-#define DEBUG_TO_CONSOLE
+#define DEBUG_TO_CONSOLE /* If defined debug messages would be written to console */
 #define DEBUG_OUTPUT_FILENAME "logs.txt" /* Filename for debug output if 
 					    DEBUG_TO_CONSOLE is not defined */
 
@@ -20,7 +21,6 @@ PRIVATE CONSOLE_SCREEN_BUFFER_INFO console_info;
 
 bool init_debug(void)
 {
-	FILE *f_dbg;
 #ifdef DEBUG_TO_CONSOLE
 	AllocConsole();
 	freopen("CONIN$", "rb", stdin);
@@ -29,8 +29,11 @@ bool init_debug(void)
 
 	if (stdin == NULL || stdout == NULL || stderr == NULL)
 		return false;
+
+	console_handler = GetStdHandle(STD_OUTPUT_HANDLE);
 	return true;
 #elif
+	FILE *f_dbg;
 	if ((f_dbg = fopen(DEBUG_OUTPUT_FILENAME, "w")) = NULL)
 		return false;
 
@@ -41,14 +44,16 @@ bool init_debug(void)
 #endif
 }
 
-
+/* Log wsa error code converted to string with colorful output */
 void log_wsa_error(int error_code)
 {
-	wchar_t *s = NULL;
+	wchar_t *s = NULL; /* Pointer to string with error message */
 
-	console_handler = GetStdHandle(STD_OUTPUT_HANDLE); // Console handler
-	GetConsoleScreenBufferInfo(console_handler, &console_info); // Saving console text colors
+#ifdef DEBUG_TO_CONSOLE
+	GetConsoleScreenBufferInfo(console_handler, &console_info); /* Save console state */
+#endif
 
+	/* Get error text description from error code */
 	FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
 		NULL, 
 		error_code, 
@@ -57,12 +62,19 @@ void log_wsa_error(int error_code)
 		0, 
 		NULL
 		); 
+
 	if (s != NULL) { 
 		fprintf(stderr, "Error message: "); 
 
+#ifdef DEBUG_TO_CONSOLE
 		SetConsoleTextAttribute(console_handler, FOREGROUND_RED | FOREGROUND_INTENSITY);
+#endif
+
 		fprintf(stderr, "%S", s); 
-		SetConsoleTextAttribute(console_handler, console_info.wAttributes); // Restoring console text colors
+
+#ifdef DEBUG_TO_CONSOLE
+		SetConsoleTextAttribute(console_handler, console_info.wAttributes); /* Restore console text colors */
+#endif
 
 		if (LocalFree(s) != NULL) { 
 			DBG_ERROR("LocalFree() failed (%d)\n", GetLastError()); 
@@ -73,14 +85,18 @@ void log_wsa_error(int error_code)
 	} 
 }
 
+/* Log message with color corresponding to level */
 void log_message(int mode, const char *format, ...)
 {
 	int i;
 	va_list args;
 	FILE *out;
-	console_handler = GetStdHandle(STD_OUTPUT_HANDLE); // Console handler
-	GetConsoleScreenBufferInfo(console_handler, &console_info); // Saving console text colors
 
+#ifdef DEBUG_TO_CONSOLE
+	GetConsoleScreenBufferInfo(console_handler, &console_info); /* Save console state */
+#endif
+
+#ifdef DEBUG_TO_CONSOLE
 	switch (mode) {
 		case DBG_MODE_FATAL:
 			SetConsoleTextAttribute(console_handler, FOREGROUND_RED);
@@ -102,13 +118,14 @@ void log_message(int mode, const char *format, ...)
 			out = stdout;
 			break;
 	}
+#endif
 
-	// Printing args
+	/* Printing args */
 	va_start(args, format);
 	vfprintf(out, format, args);
 	va_end(args);
 
-	SetConsoleTextAttribute(console_handler, console_info.wAttributes); // Restoring console text colors
+#ifdef DEBUG_TO_CONSOLE
+	SetConsoleTextAttribute(console_handler, console_info.wAttributes); /* Restore console text colors */
+#endif
 }
-
-

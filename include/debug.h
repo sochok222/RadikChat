@@ -2,6 +2,7 @@
 #define DEBUG_H
 
 #include <stdio.h>
+#include <stdbool.h>
 
 #define DBG_MODE_FATAL 0
 #define DBG_MODE_ERROR 1
@@ -58,15 +59,24 @@
 
 void log_message(int mode, const char *format, ...);
 void log_wsa_error(int error_code);
+void log_win_error(int error_code);
+bool init_debug(void);
 
 #define PRINT_WSA_ERROR(error) \
-log_wsa_error(error)
+	log_wsa_error(error)
 
-#else 
+#define PRINT_WIN_ERROR(error) \
+	log_win_error(error)
 
-#define DBG(mode, ...) 
+#define INIT_DEBUG() \
+	init_debug()
+
+#else /* NO_DEBUG_BUILD */
+
 #define PRINT_WSA_ERROR(error)
+#define PRINT_WIN_ERROR(error)
+#define INIT_DEBUG() true /* If debug build is not defined debug initialization is always successful */
 
-#endif // NO_DEBUG_BUILD 
+#endif /* NO_DEBUG_BUILD */
 
-#endif // DEBUG_H
+#endif /* DEBUG_H */
