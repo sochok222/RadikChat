@@ -1,3 +1,13 @@
-#include <windows.h> /* WINAPI gui */
+#include <windows.h> /* win32 */
+#include <stdbool.h>
 
-HWND create_main_window(char *window_name, char *window_class, HINSTANCE hInstance);
+/* Create main window and return it handle.	*
+ * Function requires handle to a instance of	*
+ * current application				*
+ * And pointer to window procedure		*/
+bool register_mw_class(HINSTANCE hInstance, LRESULT (*lpfnWndProc)(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam));
+
+/* Create main window and return it handle.	*
+ * Function requires handle to a instance of	*
+ * current application 				*/
+HWND create_main_window(HINSTANCE hInstance, char *window_name);

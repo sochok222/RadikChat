@@ -19,33 +19,33 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hInstPrev, LPSTR lpCmdLine, int nCmdShow)
 {
 	/* TODO: Init winsock */
-	WNDCLASSA wc = {0};
 	HWND hwnd; /* Handle to main window */
 
-	wc.lpfnWndProc = WindowProc;
-	wc.hInstance = hInstance;
-	wc.lpszClassName = "RadikChat";
-
 	if (!INIT_DEBUG())
-		return 0;
+		return 1;
 
-	if (!RegisterClass(&wc)) {
+	if (!register_mw_class(hIsntace, WindowProc)) {
 		DBG_FATAL("Failed to register window class\n");
+		return 1;
 	}
 
-	hwnd = create_main_window("RadikChat", "RadikChat", hInstance);
+	hwnd = create_main_window(hInstance, "RadikChat");
 
 	if (hwnd == NULL) {
-		DBG_FATAL("Failed to create window\n");
+		DBG_FATAL("Failed to create window (%d)\n", GetLastError());
+		return 1;
 	}
 
 	ShowWindow(hwnd, nCmdShow);
+
+	/* Handle messages from the system */
 	MSG msg = { };
-    while (GetMessage(&msg, NULL, 0, 0) > 0)
-    {
-        TranslateMessage(&msg);
-        DispatchMessage(&msg);
-    }	
+	while (GetMessage(&msg, NULL, 0, 0) > 0)
+	{
+		TranslateMessage(&msg);
+		DispatchMessage(&msg);
+	}
+
 	return 0;
 }
 
