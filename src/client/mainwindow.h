@@ -5,7 +5,7 @@
  * Function requires handle to a instance of	*
  * current application				*
  * And pointer to window procedure		*/
-bool register_mw_class(HINSTANCE hInstance, LRESULT (*lpfnWndProc)(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam));
+bool register_mw_class(HINSTANCE hInstance, LRESULT (CALLBACK *lpfnWndProc)(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam));
 
 /* Create main window and return it handle.	*
  * Function requires handle to a instance of	*

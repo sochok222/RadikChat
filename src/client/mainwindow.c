@@ -3,7 +3,7 @@
 
 #define MW_CLASS_NAME "MainWindow"
 
-bool register_mw_class(HINSTANCE hInstance, LRESULT (*lpfnWndProc)(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam))
+bool register_mw_class(HINSTANCE hInstance, LRESULT (CALLBACK *lpfnWndProc)(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam))
 {
 	WNDCLASSA wc = { 0 }; /* Window class structure members must be zeroed */
 
