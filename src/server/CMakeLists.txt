@@ -5,10 +5,10 @@ set(${PROJECT_NAME}_src
 	server.c
 )
 
-add_executable(${PROJECT_NAME} WIN32 ${${PROJECT_NAME}_src})
+add_executable(${PROJECT_NAME} ${${PROJECT_NAME}_src})
 
 target_link_libraries(${PROJECT_NAME} PRIVATE 
-	NetworkManager
+	Network
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE 

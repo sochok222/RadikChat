@@ -1,16 +1,17 @@
 #include <stdio.h>
 #include <client.h>
-#include <winsock2.h> 
-#include <ws2tcpip.h> 
-#include <debug.h> 
+#include <winsock2.h> /* sockets */
+#include <ws2tcpip.h> /* networking */
+#include <debug.h> /* logging */
 #include <conio.h> 
-#include <stdbool.h> 
-#include <process.h> 
-#include <windows.h>
+#include <stdbool.h> /* bool */
+#include <process.h> /* _beginthread */
+#include <windows.h> /* WINAPI */
 
-#include <network_manager.h>
+#include <socket_utils.h> /* create * socket */
 #include <mainwindow.h>
 
+/* Default address and port of the server */
 #define SERVER_ADDR "192.168.0.184"
 #define SERVER_PORT "8899"
 

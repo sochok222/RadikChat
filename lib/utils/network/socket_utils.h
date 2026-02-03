@@ -1,5 +1,5 @@
-#ifndef NETWORK_MANAGER_H
-#define NETWORK_MANAGER_H
+#ifndef SOCKET_UTILS_H
+#define SOCKET_UTILS_H
 
 #include <winsock2.h>
 
@@ -23,4 +23,4 @@ PUBLIC SOCKET create_active_socket(const char *host, const char *port, const int
  ***********************************************************/
 PUBLIC SOCKET create_passive_socket(const char *port, const int socktype, const int family, const int backlog);
 
-#endif
+#endif /* SOCKET_UTILS_H */

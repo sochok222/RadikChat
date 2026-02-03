@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <winsock2.h>
 #include <debug.h>
-#include <network_manager.h>
+#include <socket_utils.h>
 #include <ws2tcpip.h>
 
 #define ADDRESS_LEN 64
@@ -27,8 +27,6 @@ int main(void)
 		fprintf(stderr, "Error: Failed to initialize winsock\n");
 		return 1;
 	}
-
-	AllocConsole();
 
 	printf("Enter service: ");
 	if (scanf("%s", service) != 1) {

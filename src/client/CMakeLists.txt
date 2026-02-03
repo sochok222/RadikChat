@@ -10,7 +10,7 @@ add_executable(${PROJECT_NAME} WIN32 ${${PROJECT_NAME}_src})
 
 target_link_libraries(${PROJECT_NAME} PRIVATE 
 	Debug
-	NetworkManager
+	Network
 	ws2_32
 )
 
