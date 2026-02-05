@@ -4,6 +4,9 @@
 #include <ws2tcpip.h> // SOCKET ...
 #include <stdio.h>
 
+#define PUBLIC
+#define PRIVATE static
+
 PUBLIC SOCKET create_passive_socket(const char *port, const int socktype, const int family, const int backlog)
 {
 	struct addrinfo hints, *bind_address = NULL;

@@ -6,7 +6,7 @@
 #include <conio.h> 
 #include <stdbool.h> /* bool */
 #include <process.h> /* _beginthread */
-#include <windows.h> /* WINAPI */
+#include <windows.h> /* WIN sockets */
 
 #include <socket_utils.h> /* create * socket */
 #include <mainwindow.h>
