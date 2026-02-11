@@ -1,11 +1,12 @@
 #include <mainwindow.h>
 #include <windows.h>
+#include <commdlg.h>
 
-#define MW_CLASS_NAME "MainWindow"
+#define MW_CLASS_NAME TEXT("MainWindow")
 
 bool register_mw_class(HINSTANCE hInstance, LRESULT (CALLBACK *lpfnWndProc)(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam))
 {
-	WNDCLASSA wc = { 0 }; /* Window class structure members must be zeroed */
+        WNDCLASS wc = { 0 }; /* Window class structure members must be zeroed */
 
 	wc.lpfnWndProc = lpfnWndProc;
 	wc.hInstance = hInstance;
@@ -17,9 +18,9 @@ bool register_mw_class(HINSTANCE hInstance, LRESULT (CALLBACK *lpfnWndProc)(HWND
 }
 
 
-HWND create_main_window(HINSTANCE hInstance, char *window_name)
+HWND create_main_window(HINSTANCE hInstance, TCHAR *window_name)
 {
-	return CreateWindowA(
+        return CreateWindow(
 			MW_CLASS_NAME,
 			window_name,
 			WS_OVERLAPPEDWINDOW,

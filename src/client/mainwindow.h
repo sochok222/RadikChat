@@ -10,4 +10,4 @@ bool register_mw_class(HINSTANCE hInstance, LRESULT (CALLBACK *lpfnWndProc)(HWND
 /* Create main window and return it handle.	*
  * Function requires handle to a instance of	*
  * current application 				*/
-HWND create_main_window(HINSTANCE hInstance, char *window_name);
+HWND create_main_window(HINSTANCE hInstance, TCHAR *window_name);

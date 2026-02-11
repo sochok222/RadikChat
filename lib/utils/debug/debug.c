@@ -76,17 +76,17 @@ void log_wsa_error(int error_code)
 		SetConsoleTextAttribute(console_handler, console_info.wAttributes); /* Restore console text colors */
 #endif
 
-		if (LocalFree(s) != NULL) { 
-			DBG_ERROR("LocalFree() failed (%d)\n", GetLastError()); 
+		if (LocalFree(s) != NULL) {
+                        DBG_ERROR(TEXT("LocalFree() failed (%d)\n"), GetLastError());
 		} 
 	} 
 	else { 
-		DBG_ERROR("Can't find error message for error code (%d)\n", error_code); 
+                DBG_ERROR(TEXT("Can't find error message for error code (%d)\n"), error_code);
 	} 
 }
 
 /* Log message with color corresponding to level */
-void log_message(int mode, const char *format, ...)
+void log_message(int mode, const TCHAR *format, ...)
 {
 	int i;
 	va_list args;
@@ -119,10 +119,9 @@ void log_message(int mode, const char *format, ...)
 			break;
 	}
 #endif
-
 	/* Printing args */
 	va_start(args, format);
-	vfprintf(out, format, args);
+        _ftprintf(out, format, args);
 	va_end(args);
 
 #ifdef DEBUG_TO_CONSOLE

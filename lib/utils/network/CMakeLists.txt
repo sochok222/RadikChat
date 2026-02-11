@@ -3,6 +3,7 @@ project(Network LANGUAGES C)
 
 set(${PROJECT_NAME}_src
 	socket_utils.c
+	socket_utils.h
 )
 
 add_library(${PROJECT_NAME} STATIC ${${PROJECT_NAME}_src})

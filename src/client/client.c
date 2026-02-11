@@ -3,7 +3,6 @@
 #include <winsock2.h> /* sockets */
 #include <ws2tcpip.h> /* networking */
 #include <debug.h> /* logging */
-#include <conio.h> 
 #include <stdbool.h> /* bool */
 #include <process.h> /* _beginthread */
 #include <windows.h> /* WIN sockets */
@@ -17,7 +16,11 @@
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
+#ifdef UNICODE
+int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hInstPrev, LPWSTR lpCmdLine, int nCmdShow)
+#else
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hInstPrev, LPSTR lpCmdLine, int nCmdShow)
+#endif
 {
 	/* TODO: Init winsock */
 	HWND hwnd; /* Handle to main window */
@@ -26,14 +29,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hInstPrev, LPSTR lpCmdLine, in
 		return 1;
 
 	if (!register_mw_class(hInstance, WindowProc)) {
-		DBG_FATAL("Failed to register window class\n");
+                DBG_FATAL(TEXT("Failed to register window class\n"));
 		return 1;
 	}
 
 	hwnd = create_main_window(hInstance, "RadikChat");
 
 	if (hwnd == NULL) {
-		DBG_FATAL("Failed to create window (%d)\n", GetLastError());
+                DBG_FATAL(TEXT("Failed to create window (%d)\n"), GetLastError());
 		return 1;
 	}
 
