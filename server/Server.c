@@ -3,34 +3,25 @@
 #include <stdio.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
+#include <NetworkTypes.h>
 
 #define ADDRESS_LEN 64
 #define SERVICE_LEN 64
+#define PORT "1423"
 
 int main(void) 
 {
 	WSADATA wsadata;
 	struct sockaddr_storage clientAddress;
-	char address[ADDRESS_LEN+1], service[SERVICE_LEN+1];
 	SOCKET socketListen, socketClient;
 	fd_set fdMaster, fdReads;
 	char *readBuffer;
-	int i, sockaddrSize, bytesReceived;
-    readBuffer = malloc(sizeof(*readBuffer) * 1024);
+	int i, bytesReceived;
+    socklen_t sockaddrSize;
 
-	if (readBuffer == NULL)
-                printf("Cant alloc for read buffer\n");
-
-        printf("Initializing winsock...\n");
+    DBG_INFO("Initializing winsock...\n");
 	if (WSAStartup(MAKEWORD(2, 2), &wsadata) != 0) {
                 fprintf(stderr, "Error: Failed to initialize winsock\n");
-		return 1;
-	}
-
-        printf("Enter service: ");
-        if (scanf("%s", service) != 1) {
-                fprintf(stderr, "Error: Failed to read service\n");
-		WSACleanup();
 		return 1;
 	}
 
@@ -42,7 +33,7 @@ int main(void)
 	while (1) {
 		fdReads = fdMaster;
 		if (select(0, &fdReads, 0, 0, 0) < 0) {
-                        fprintf(stderr, "Error: select() failed. Error code (%d)\n", WSAGetLastError());
+		    fprintf(stderr, "Error: select() failed. Error code (%d)\n", WSAGetLastError());
 			closesocket(socketListen);
 			WSACleanup();
 			return 1;
@@ -52,19 +43,18 @@ int main(void)
 				sockaddrSize = sizeof(clientAddress);
 				socketClient = accept(socketListen, (struct sockaddr*)&clientAddress, &sockaddrSize);
 				if (socketClient == INVALID_SOCKET)
-                                        printf("INVALID\n");
+				    printf("INVALID\n");
 				FD_SET(socketClient, &fdMaster);
-                                printf("Client connected.\n");
+			    printf("Client connected.\n");
 			} else {
 				bytesReceived = recv(fdReads.fd_array[i], readBuffer, 1024, 0);
-				if (bytesReceived < 1) {
-					FD_CLR(i, &fdMaster);
-					closesocket(i);
-					return 0;
-					continue;
-				}
 
-                                printf("%.*s", bytesReceived, readBuffer);
+				if (bytesReceived < 1) {
+				    FD_CLR(i, &fdMaster);
+				    closesocket(i);
+				    return 0;
+				    continue;
+				}
 			}
 		}
 	}

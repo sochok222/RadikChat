@@ -5,4 +5,6 @@
 #ifndef RADIKCHAT_NETWORKTYPES_H
 #define RADIKCHAT_NETWORKTYPES_H
 
+typedef enum eMessageType MessageType;
+
 #endif //RADIKCHAT_NETWORKTYPES_H

@@ -1,0 +1,8 @@
+#ifndef RADIKCHAT_SERVERUTILS_H
+#define RADIKCHAT_SERVERUTILS_H
+
+#define MAX_REQUEST_SIZE 1024
+
+typedef struct sClientInfo ClientInfo;
+
+#endif //RADIKCHAT_SERVERUTILS_H

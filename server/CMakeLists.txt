@@ -2,8 +2,10 @@ cmake_minimum_required(VERSION 3.28)
 project(Server LANGUAGES C)
 
 set(${PROJECT_NAME}_src
-		server.h
-		server.c
+		Server.h
+		Server.c
+		ServerUtils.h
+		ServerUtils.c
 )
 
 add_executable(${PROJECT_NAME} ${${PROJECT_NAME}_src})

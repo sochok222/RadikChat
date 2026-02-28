@@ -74,7 +74,7 @@ PUBLIC SOCKET createActiveSocket(const TCHAR *host, const TCHAR *port, const int
 	SOCKET socketPeer = INVALID_SOCKET;
 	int errorCode; // For storing error code from WSAGetLastError()
 
-        DBG_DEBUG("Configuring remote address...\n");
+    DBG_DEBUG("Configuring remote address...\n");
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_socktype = socktype;
 	if (getaddrinfo(host, port, &hints, &peerAddress) != 0) {
@@ -83,7 +83,7 @@ PUBLIC SOCKET createActiveSocket(const TCHAR *host, const TCHAR *port, const int
 		goto failure;
 	}
 
-        DBG_DEBUG("Creating socket...\n");
+    DBG_DEBUG("Creating socket...\n");
 	if ((socketPeer = socket(peerAddress->ai_family, peerAddress->ai_socktype,
 				    peerAddress->ai_protocol)) == INVALID_SOCKET) {
                 DBG_ERROR("socket() failed. Error code (%d)\n", WSAGetLastError());
@@ -91,7 +91,7 @@ PUBLIC SOCKET createActiveSocket(const TCHAR *host, const TCHAR *port, const int
 		goto failure;
 	}
 	
-        DBG_DEBUG("Connecting to server...\n");
+    DBG_DEBUG("Connecting to server...\n");
 	if (connect(socketPeer, peerAddress->ai_addr, peerAddress->ai_addrlen) != 0) {
                 DBG_ERROR("connect() failed. Error code (%d)\n", WSAGetLastError());
 		errorCode = WSAGetLastError();
@@ -106,7 +106,7 @@ PUBLIC SOCKET createActiveSocket(const TCHAR *host, const TCHAR *port, const int
 		goto failure;
 	}
 	
-        DBG_DEBUG("Successfully created and connected socket\n");
+    DBG_DEBUG("Successfully created and connected socket\n");
 	return socketPeer;
 
 failure:
