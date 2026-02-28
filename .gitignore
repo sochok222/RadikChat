@@ -1,0 +1,4 @@
+/build
+.clang-format
+.idea/codeStyles/codeStyleConfig.xml
+/.idea

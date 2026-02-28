@@ -10,16 +10,15 @@
 int main(void) 
 {
 	WSADATA wsadata;
-	struct sockaddr_storage client_address;
+	struct sockaddr_storage clientAddress;
 	char address[ADDRESS_LEN+1], service[SERVICE_LEN+1];
-	SOCKET socket_listen, socket_client;
-	fd_set fd_master, fd_reads;
-	char *read_buffer;
-	int i, sockaddr_size;
+	SOCKET socketListen, socketClient;
+	fd_set fdMaster, fdReads;
+	char *readBuffer;
+	int i, sockaddrSize, bytesReceived;
+    readBuffer = malloc(sizeof(*readBuffer) * 1024);
 
-	int bytes_received;
-	read_buffer = malloc(sizeof(*read_buffer) * 1024);
-	if (read_buffer == NULL)
+	if (readBuffer == NULL)
                 _tprintf(TEXT("Cant alloc for read buffer\n"));
 
         _tprintf(TEXT("Initializing winsock...\n"));
@@ -35,44 +34,44 @@ int main(void)
 		return 1;
 	}
 
-	socket_listen = create_passive_socket(service, SOCK_STREAM, AF_INET, 10);
+	socketListen = createPassiveSocket(service, SOCK_STREAM, AF_INET, 10);
 
-	FD_ZERO(&fd_master);
-	FD_SET(socket_listen, &fd_master);
+	FD_ZERO(&fdMaster);
+	FD_SET(socketListen, &fdMaster);
         _tprintf(TEXT("Waiting for connections...\n"));
 	while (1) {
-		fd_reads = fd_master;
-		if (select(0, &fd_reads, 0, 0, 0) < 0) {
+		fdReads = fdMaster;
+		if (select(0, &fdReads, 0, 0, 0) < 0) {
                         _ftprintf(stderr, TEXT("Error: select() failed. Error code (%d)\n"), WSAGetLastError());
-			closesocket(socket_listen);
+			closesocket(socketListen);
 			WSACleanup();
 			return 1;
 		}
-		for (i = 0; i < fd_reads.fd_count; i++) {
-			if (fd_reads.fd_array[i] == socket_listen) {
-				sockaddr_size = sizeof(client_address);
-				socket_client = accept(socket_listen, (struct sockaddr*)&client_address, &sockaddr_size);
-				if (socket_client == INVALID_SOCKET)
+		for (i = 0; i < fdReads.fd_count; i++) {
+			if (fdReads.fd_array[i] == socketListen) {
+				sockaddrSize = sizeof(clientAddress);
+				socketClient = accept(socketListen, (struct sockaddr*)&clientAddress, &sockaddrSize);
+				if (socketClient == INVALID_SOCKET)
                                         _tprintf(TEXT("INVALID\n"));
-				FD_SET(socket_client, &fd_master);
+				FD_SET(socketClient, &fdMaster);
                                 _tprintf(TEXT("Client connected.\n"));
 			} else {
-				bytes_received = recv(fd_reads.fd_array[i], read_buffer, 1024, 0);
-				if (bytes_received < 1) {
-					FD_CLR(i, &fd_master);
+				bytesReceived = recv(fdReads.fd_array[i], readBuffer, 1024, 0);
+				if (bytesReceived < 1) {
+					FD_CLR(i, &fdMaster);
 					closesocket(i);
 					return 0;
 					continue;
 				}
 
-                                _tprintf(TEXT("%.*s"), bytes_received, read_buffer);
+                                _tprintf(TEXT("%.*s"), bytesReceived, readBuffer);
 			}
 		}
 	}
 
 
 
-	if (closesocket(socket_listen) == SOCKET_ERROR) {
+	if (closesocket(socketListen) == SOCKET_ERROR) {
                 _ftprintf(stderr, TEXT("Error: closesocket() failed. Error code: (%d)\n"), WSAGetLastError());
 		WSACleanup();
 		return 1;
