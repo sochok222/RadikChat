@@ -1,72 +1,110 @@
+#include "ServerUtils.h"
+
 #include <Debug.h>
+#include <NetworkTypes.h>
 #include <SocketUtils.h>
 #include <stdio.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
-#include <NetworkTypes.h>
 
 #define ADDRESS_LEN 64
 #define SERVICE_LEN 64
 #define PORT "1423"
+#define BACKLOG 10
+
+static int init();
 
 int main(void) 
 {
-	WSADATA wsadata;
-	struct sockaddr_storage clientAddress;
-	SOCKET socketListen, socketClient;
-	fd_set fdMaster, fdReads;
-	char *readBuffer;
-	int i, bytesReceived;
-    socklen_t sockaddrSize;
+	SOCKET      socketListen;
+	fd_set      fdReads;
+	int         bytesReceived;
+    int         packetType;
+    char        respond;
 
-    DBG_INFO("Initializing winsock...\n");
-	if (WSAStartup(MAKEWORD(2, 2), &wsadata) != 0) {
-                fprintf(stderr, "Error: Failed to initialize winsock\n");
-		return 1;
-	}
+    init();
 
-	socketListen = createPassiveSocket(service, SOCK_STREAM, AF_INET, 10);
+    socketListen = createPassiveSocket(PORT, SOCK_STREAM, AF_INET, BACKLOG);
 
-	FD_ZERO(&fdMaster);
-	FD_SET(socketListen, &fdMaster);
-    printf("Waiting for connections...\n");
+    DBG_INFO("Waiting for connections...\n");
 	while (1) {
-		fdReads = fdMaster;
-		if (select(0, &fdReads, 0, 0, 0) < 0) {
-		    fprintf(stderr, "Error: select() failed. Error code (%d)\n", WSAGetLastError());
-			closesocket(socketListen);
-			WSACleanup();
-			return 1;
-		}
-		for (i = 0; i < fdReads.fd_count; i++) {
-			if (fdReads.fd_array[i] == socketListen) {
-				sockaddrSize = sizeof(clientAddress);
-				socketClient = accept(socketListen, (struct sockaddr*)&clientAddress, &sockaddrSize);
-				if (socketClient == INVALID_SOCKET)
-				    printf("INVALID\n");
-				FD_SET(socketClient, &fdMaster);
-			    printf("Client connected.\n");
-			} else {
-				bytesReceived = recv(fdReads.fd_array[i], readBuffer, 1024, 0);
+	    fdReads = waitForClients(socketListen);
+	    if (FD_ISSET(socketListen, &fdReads)) {
+	        ClientInfo *client = getClient(-1);
 
-				if (bytesReceived < 1) {
-				    FD_CLR(i, &fdMaster);
-				    closesocket(i);
-				    return 0;
-				    continue;
-				}
-			}
-		}
+	        client->socket = accept(socketListen, (struct sockaddr *)&client->address, &client->addressSize);
+
+	        if (client->socket == INVALID_SOCKET) {
+	            DBG_ERROR("Failed to accept connection\n");
+	            logWsaError(WSAGetLastError());
+	        }
+
+	        DBG_DEBUG("New connection from %s\n", getClientAddress(client));
+	    }
+
+	    // Receive packets
+	    ClientInfo *client = clients;
+	    while (client != NULL) {
+	        if (FD_ISSET(client->socket, &fdReads)) {
+	            bytesReceived = recv(client->socket, client->buffer + client->receivedBytes, sizeof(client->buffer) - client->receivedBytes, 0);
+
+	            if (bytesReceived <= 0) {
+	                DBG_DEBUG("Disconnect from %s client", getClientAddress(client));
+	                deleteClient(client);
+	                continue;
+	            }
+	            client->receivedBytes += bytesReceived;
+	        }
+            client = client->next;
+	    }
+	    // Process packets
+	    client = clients;
+	    while (client != NULL) {
+	        packetType = *((int*)client->buffer);
+	        if (client->receivedBytes > PACKET_HEADER_SIZE) {
+	            if (packetType == TYPE_LOGIN) {
+	                if (*((int*)(client->buffer + PACKET_TYPE_SIZE)) < (bytesReceived - PACKET_HEADER_SIZE)) // Check if full message received
+	                    continue;
+	                if (!processLoginPacket(client)) {
+	                    respond = TYPE_LOGIN_FAILURE;
+	                } else
+                        respond = TYPE_LOGIN_SUCCESS;
+                    send(client->socket, &respond, sizeof(respond), 0);
+	            } else if (packetType == TYPE_MESSAGE) {
+	                // Check if recipient nickname is full
+
+	                // Check if message is full
+
+	                // Process message
+	            }
+	        }
+	        client = client->next;
+	    }
 	}
 
 
 
 	if (closesocket(socketListen) == SOCKET_ERROR) {
-                _ftprintf(stderr, "Error: closesocket() failed. Error code: (%d)\n", WSAGetLastError());
+	    DBG_ERROR("Can't close listen socket");
+	    logWsaError(WSAGetLastError());
 		WSACleanup();
 		return 1;
 	}
 	WSACleanup();
 
 	return 0;
+}
+
+static int init()
+{
+	WSADATA wsadata;
+
+    initDebug();
+    initServerUtils();
+
+    DBG_INFO("Initializing winsock...\n");
+    if (WSAStartup(MAKEWORD(2, 2), &wsadata) != 0) {
+        fprintf(stderr, "Error: Failed to initialize winsock\n");
+        return 1;
+    }
 }

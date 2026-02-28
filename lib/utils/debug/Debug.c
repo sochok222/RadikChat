@@ -19,7 +19,7 @@
 PRIVATE	HANDLE console_handler;
 PRIVATE CONSOLE_SCREEN_BUFFER_INFO console_info;
 
-bool init_debug(void)
+bool initDebug(void)
 {
 #ifdef DEBUG_TO_CONSOLE
 	AllocConsole();
@@ -45,7 +45,7 @@ bool init_debug(void)
 }
 
 /* Log wsa error code converted to string with colorful output */
-void log_wsa_error(int error_code)
+void logWsaError(int error_code)
 {
 	wchar_t *s = NULL; /* Pointer to string with error message */
 
@@ -86,7 +86,7 @@ void log_wsa_error(int error_code)
 }
 
 /* Log message with color corresponding to level */
-void log_message(int mode, const TCHAR *format, ...)
+void logMessage(int mode, const TCHAR *format, ...)
 {
 	int i;
 	va_list args;

@@ -20,56 +20,56 @@
 	log_message(DBG_MODE_DEBUG, __VA_ARGS__);
 #elif DEBUG_LEVEL >= 4
 #define DBG_DEBUG(...)\
-	log_message(DBG_MODE_DEBUG, __VA_ARGS__);
+	logMessage(DBG_MODE_DEBUG, __VA_ARGS__);
 #else
 #define DBG_DEBUG(...)
 #endif
 
 #if DEBUG_LEVEL >= 3
 #define DBG_INFO(...)\
-    log_message(DBG_MODE_INFO, "[INFO]: ");\
-	log_message(DBG_MODE_INFO, __VA_ARGS__);
+    logMessage(DBG_MODE_INFO, "[INFO]: ");\
+	logMessage(DBG_MODE_INFO, __VA_ARGS__);
 #else
 #define DBG_INFO(...)
 #endif
 
 #if DEBUG_LEVEL >= 2
 #define DBG_WARNING(...)\
-    log_message(DBG_MODE_WARNING, "[WARNING]: %s(), line %d: ", __FUNCTION__, __LINE__);\
-	log_message(DBG_MODE_WARNING, __VA_ARGS__);
+    logMessage(DBG_MODE_WARNING, "[WARNING]: %s(), line %d: ", __FUNCTION__, __LINE__);\
+	logMessage(DBG_MODE_WARNING, __VA_ARGS__);
 #else
 #define DBG_WARNING(...)
 #endif
 
 #if DEBUG_LEVEL >= 1
 #define DBG_ERROR(...)\
-    log_message(DBG_MODE_ERROR, "[ERROR] %s(), line %d: ", __FUNCTION__, __LINE__);\
-	log_message(DBG_MODE_ERROR, __VA_ARGS__);
+    logMessage(DBG_MODE_ERROR, "[ERROR] %s(), line %d: ", __FUNCTION__, __LINE__);\
+	logMessage(DBG_MODE_ERROR, __VA_ARGS__);
 #else
 #define DBG_ERROR(...)
 #endif
 
 #if DEBUG_LEVEL >= 1
 #define DBG_FATAL(...)\
-    log_message(DBG_MODE_FATAL, "[FATAL]: %s(), line %d: ", __FUNCTION__, __LINE__);\
-	log_message(DBG_MODE_FATAL, __VA_ARGS__);
+    logMessage(DBG_MODE_FATAL, "[FATAL]: %s(), line %d: ", __FUNCTION__, __LINE__);\
+	logMessage(DBG_MODE_FATAL, __VA_ARGS__);
 #else
 #define DBG_FATAL(...)
 #endif
 
-void log_message(int mode, const TCHAR *format, ...);
-void log_wsa_error(int error_code);
-void log_win_error(int error_code);
-bool init_debug(void);
+void logMessage(int mode, const TCHAR *format, ...);
+void logWsaError(int error_code);
+void logWinError(int error_code);
+bool initDebug(void);
 
 #define PRINT_WSA_ERROR(error) \
-	log_wsa_error(error)
+	logWsaError(error)
 
 #define PRINT_WIN_ERROR(error) \
-	log_win_error(error)
+	logWinError(error)
 
 #define INIT_DEBUG() \
-	init_debug()
+	initDebug()
 
 #else /* NO_DEBUG_BUILD */
 

@@ -36,11 +36,19 @@ bool signIn(SOCKET socket);
 
 int main(void)
 {
+    WSADATA wsadata;
+
+    if (WSAStartup(MAKEWORD(2, 2), &wsadata) != 0) {
+        fprintf(stderr, "Error: Failed to initialize winsock\n");
+        return 1;
+    }
+
     SOCKET socketServer = createActiveSocket(SERVER_ADDRESS, SERVER_PORT, SOCK_STREAM);
     if (socketServer == INVALID_SOCKET) {
         printf("Error creating socket\n");
         return 1;
     }
+    closesocket(socketServer);
 
     int unread, choice;
 

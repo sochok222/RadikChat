@@ -1,2 +1,4 @@
-#include <stdio.h>
+#ifndef RADIKCHAT_SERVER_H
+#define RADIKCHAT_SERVER_H
 
+#endif //RADIKCHAT_SERVER_H
