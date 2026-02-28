@@ -19,17 +19,17 @@ int main(void)
     readBuffer = malloc(sizeof(*readBuffer) * 1024);
 
 	if (readBuffer == NULL)
-                _tprintf(TEXT("Cant alloc for read buffer\n"));
+                printf("Cant alloc for read buffer\n");
 
-        _tprintf(TEXT("Initializing winsock...\n"));
+        printf("Initializing winsock...\n");
 	if (WSAStartup(MAKEWORD(2, 2), &wsadata) != 0) {
-                fprintf(stderr, TEXT("Error: Failed to initialize winsock\n"));
+                fprintf(stderr, "Error: Failed to initialize winsock\n");
 		return 1;
 	}
 
-        _tprintf(TEXT("Enter service: "));
-        if (scanf(TEXT("%s"), service) != 1) {
-                fprintf(stderr, TEXT("Error: Failed to read service\n"));
+        printf("Enter service: ");
+        if (scanf("%s", service) != 1) {
+                fprintf(stderr, "Error: Failed to read service\n");
 		WSACleanup();
 		return 1;
 	}
@@ -38,11 +38,11 @@ int main(void)
 
 	FD_ZERO(&fdMaster);
 	FD_SET(socketListen, &fdMaster);
-        _tprintf(TEXT("Waiting for connections...\n"));
+    printf("Waiting for connections...\n");
 	while (1) {
 		fdReads = fdMaster;
 		if (select(0, &fdReads, 0, 0, 0) < 0) {
-                        _ftprintf(stderr, TEXT("Error: select() failed. Error code (%d)\n"), WSAGetLastError());
+                        fprintf(stderr, "Error: select() failed. Error code (%d)\n", WSAGetLastError());
 			closesocket(socketListen);
 			WSACleanup();
 			return 1;
@@ -52,9 +52,9 @@ int main(void)
 				sockaddrSize = sizeof(clientAddress);
 				socketClient = accept(socketListen, (struct sockaddr*)&clientAddress, &sockaddrSize);
 				if (socketClient == INVALID_SOCKET)
-                                        _tprintf(TEXT("INVALID\n"));
+                                        printf("INVALID\n");
 				FD_SET(socketClient, &fdMaster);
-                                _tprintf(TEXT("Client connected.\n"));
+                                printf("Client connected.\n");
 			} else {
 				bytesReceived = recv(fdReads.fd_array[i], readBuffer, 1024, 0);
 				if (bytesReceived < 1) {
@@ -64,7 +64,7 @@ int main(void)
 					continue;
 				}
 
-                                _tprintf(TEXT("%.*s"), bytesReceived, readBuffer);
+                                printf("%.*s", bytesReceived, readBuffer);
 			}
 		}
 	}
@@ -72,7 +72,7 @@ int main(void)
 
 
 	if (closesocket(socketListen) == SOCKET_ERROR) {
-                _ftprintf(stderr, TEXT("Error: closesocket() failed. Error code: (%d)\n"), WSAGetLastError());
+                _ftprintf(stderr, "Error: closesocket() failed. Error code: (%d)\n", WSAGetLastError());
 		WSACleanup();
 		return 1;
 	}

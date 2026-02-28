@@ -11,6 +11,25 @@
 #define SERVER_ADDRESS "192.168.0.184"
 #define SERVER_PORT "1423"
 
+struct Message
+{
+    bool sender; // true - 'our' false - 'their'
+    char *message;
+    struct Message *next;
+};
+
+struct ChatHistory
+{
+    long long messages;
+    struct Message *head;
+};
+
+struct Contact
+{
+    char *nickname;
+    struct ChatHistory *chatHistory;
+};
+
 void showPrivateChats(void);
 void createChat(void);
 bool signIn(SOCKET socket);
@@ -25,7 +44,7 @@ int main(void)
 
     int unread, choice;
 
-    if (!signIn())
+    if (!signIn(socketServer))
         return 1;
 
     while (1) {
@@ -43,11 +62,17 @@ int main(void)
     }
 }
 
-bool signIn(void)
+bool signIn(SOCKET socket)
 {
-
+    // Signin process
 }
 
 void showPrivateChats(void)
 {
+
+}
+
+void createChat(void)
+{
+
 }

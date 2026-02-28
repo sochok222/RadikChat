@@ -6,7 +6,7 @@
 
 /************************************************ 
  * This translation unit created for colorful	*
- * debugging					*
+ * debugging					                *
  ************************************************/
 
 #define PRIVATE static
@@ -77,11 +77,11 @@ void log_wsa_error(int error_code)
 #endif
 
 		if (LocalFree(s) != NULL) {
-                        DBG_ERROR(TEXT("LocalFree() failed (%d)\n"), GetLastError());
+                        DBG_ERROR("LocalFree() failed (%d)\n", GetLastError());
 		} 
 	} 
 	else { 
-                DBG_ERROR(TEXT("Can't find error message for error code (%d)\n"), error_code);
+                DBG_ERROR("Can't find error message for error code (%d)\n", error_code);
 	} 
 }
 
@@ -121,7 +121,7 @@ void log_message(int mode, const TCHAR *format, ...)
 #endif
 	/* Printing args */
 	va_start(args, format);
-        _ftprintf(out, format, args);
+        fprintf(out, format, args);
 	va_end(args);
 
 #ifdef DEBUG_TO_CONSOLE

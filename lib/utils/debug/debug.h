@@ -27,7 +27,7 @@
 
 #if DEBUG_LEVEL >= 3
 #define DBG_INFO(...)\
-    log_message(DBG_MODE_INFO, TEXT("[INFO]: "));\
+    log_message(DBG_MODE_INFO, "[INFO]: ");\
 	log_message(DBG_MODE_INFO, __VA_ARGS__);
 #else
 #define DBG_INFO(...)
@@ -35,7 +35,7 @@
 
 #if DEBUG_LEVEL >= 2
 #define DBG_WARNING(...)\
-    log_message(DBG_MODE_WARNING, TEXT("[WARNING]: %s(), line %d: "), __FUNCTION__, __LINE__);\
+    log_message(DBG_MODE_WARNING, "[WARNING]: %s(), line %d: ", __FUNCTION__, __LINE__);\
 	log_message(DBG_MODE_WARNING, __VA_ARGS__);
 #else
 #define DBG_WARNING(...)
@@ -43,7 +43,7 @@
 
 #if DEBUG_LEVEL >= 1
 #define DBG_ERROR(...)\
-    log_message(DBG_MODE_ERROR, TEXT("[ERROR] %s(), line %d: "), __FUNCTION__, __LINE__);\
+    log_message(DBG_MODE_ERROR, "[ERROR] %s(), line %d: ", __FUNCTION__, __LINE__);\
 	log_message(DBG_MODE_ERROR, __VA_ARGS__);
 #else
 #define DBG_ERROR(...)
@@ -51,7 +51,7 @@
 
 #if DEBUG_LEVEL >= 1
 #define DBG_FATAL(...)\
-    log_message(DBG_MODE_FATAL, TEXT("[FATAL]: %s(), line %d: "), __FUNCTION__, __LINE__);\
+    log_message(DBG_MODE_FATAL, "[FATAL]: %s(), line %d: ", __FUNCTION__, __LINE__);\
 	log_message(DBG_MODE_FATAL, __VA_ARGS__);
 #else
 #define DBG_FATAL(...)
