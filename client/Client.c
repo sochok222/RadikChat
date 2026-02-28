@@ -1,6 +1,6 @@
-#include "client.h"
+#include "Client.h"
 
-#include "socket_utils.h"
+#include "SocketUtils.h"
 
 #include <conio.h>
 #include <stdio.h>

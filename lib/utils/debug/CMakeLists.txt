@@ -2,8 +2,8 @@ cmake_minimum_required(VERSION 3.28)
 project(Debug LANGUAGES C)
 
 set(${PROJECT_NAME}_src
-	debug.h
-	debug.c
+        debug.h
+        debug.c
 )
 
 add_library(${PROJECT_NAME} STATIC ${${PROJECT_NAME}_src})

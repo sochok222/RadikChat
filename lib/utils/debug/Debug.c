@@ -1,8 +1,8 @@
-#include <debug.h>
-#include <stdio.h>
+#include <Debug.h>
 #include <stdarg.h>
-#include <windows.h>
 #include <stdbool.h>
+#include <stdio.h>
+#include <windows.h>
 
 /************************************************ 
  * This translation unit created for colorful	*

@@ -2,8 +2,10 @@ cmake_minimum_required(VERSION 3.28)
 project(Network LANGUAGES C)
 
 set(${PROJECT_NAME}_src
-	socket_utils.c
-	socket_utils.h
+		SocketUtils.c
+		SocketUtils.h
+		NetworkTypes.h
+		NetworkTypes.c
 )
 
 add_library(${PROJECT_NAME} STATIC ${${PROJECT_NAME}_src})

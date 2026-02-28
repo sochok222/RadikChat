@@ -1,8 +1,8 @@
-#include <socket_utils.h>
-#include <debug.h> // DBG_ERROR ...
-#include <winsock2.h> // closesocket 
-#include <ws2tcpip.h> // SOCKET ...
+#include <Debug.h> // DBG_ERROR ...
+#include <SocketUtils.h>
 #include <stdio.h>
+#include <winsock2.h> // closesocket
+#include <ws2tcpip.h> // SOCKET ...
 
 #define PUBLIC
 #define PRIVATE static
@@ -67,10 +67,6 @@ failure:
 
 	return INVALID_SOCKET;
 }
-
-
-
-
 
 PUBLIC SOCKET createActiveSocket(const TCHAR *host, const TCHAR *port, const int socktype)
 {
