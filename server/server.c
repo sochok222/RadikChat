@@ -1,8 +1,8 @@
-#include "ServerUtils.h"
+#include "serverUtils.h"
 
-#include <Debug.h>
-#include <NetworkTypes.h>
-#include <SocketUtils.h>
+#include <debug.h>
+#include <networkTypes.h>
+#include <socketUtils.h>
 #include <stdio.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
@@ -12,7 +12,7 @@
 #define PORT "1423"
 #define BACKLOG 10
 
-static int init();
+static int serverInit();
 
 int main(void) 
 {
@@ -20,9 +20,9 @@ int main(void)
 	fd_set      fdReads;
 	int         bytesReceived;
     int         packetType;
-    char        respond;
+    int        respond;
 
-    init();
+    serverInit();
 
     socketListen = createPassiveSocket(PORT, SOCK_STREAM, AF_INET, BACKLOG);
 
@@ -37,9 +37,10 @@ int main(void)
 	        if (client->socket == INVALID_SOCKET) {
 	            DBG_ERROR("Failed to accept connection\n");
 	            logWsaError(WSAGetLastError());
+	        } else {
+                DBG_DEBUG("New connection from %s\n", getClientAddress(client));
+	            addClientToSet(client);
 	        }
-
-	        DBG_DEBUG("New connection from %s\n", getClientAddress(client));
 	    }
 
 	    // Receive packets
@@ -51,7 +52,7 @@ int main(void)
 	            if (bytesReceived <= 0) {
 	                DBG_DEBUG("Disconnect from %s client", getClientAddress(client));
 	                deleteClient(client);
-	                continue;
+	                break;
 	            }
 	            client->receivedBytes += bytesReceived;
 	        }
@@ -59,17 +60,22 @@ int main(void)
 	    }
 	    // Process packets
 	    client = clients;
-	    while (client != NULL) {
+	    while (client != NULL && client->receivedBytes > PACKET_HEADER_SIZE) {
 	        packetType = *((int*)client->buffer);
 	        if (client->receivedBytes > PACKET_HEADER_SIZE) {
 	            if (packetType == TYPE_LOGIN) {
-	                if (*((int*)(client->buffer + PACKET_TYPE_SIZE)) < (bytesReceived - PACKET_HEADER_SIZE)) // Check if full message received
+	                DBG_DEBUG("Received login packet from %s client\n", getClientAddress(client));
+	                DBG_DEBUG("Expected to receive %d but received %d\n", *((int*)(client->buffer + PACKET_TYPE_SIZE)), client->receivedBytes - PACKET_HEADER_SIZE);
+	                if (*((int*)(client->buffer + PACKET_TYPE_SIZE)) > (client->receivedBytes - PACKET_HEADER_SIZE)) { // Check if full message received
+	                    client = client->next;
 	                    continue;
+	                }
 	                if (!processLoginPacket(client)) {
 	                    respond = TYPE_LOGIN_FAILURE;
 	                } else
                         respond = TYPE_LOGIN_SUCCESS;
-                    send(client->socket, &respond, sizeof(respond), 0);
+                    int sended = send(client->socket, (char*)&respond, sizeof(respond), 0);
+	                DBG_INFO("Sended packet %d size\n", sended);
 	            } else if (packetType == TYPE_MESSAGE) {
 	                // Check if recipient nickname is full
 
@@ -95,7 +101,7 @@ int main(void)
 	return 0;
 }
 
-static int init()
+static int serverInit()
 {
 	WSADATA wsadata;
 

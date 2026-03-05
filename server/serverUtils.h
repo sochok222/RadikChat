@@ -28,6 +28,7 @@ ClientInfo* getClient(SOCKET s);
 void        deleteClient(ClientInfo* client);
 char*       getClientAddress(ClientInfo *client);
 fd_set      waitForClients(SOCKET server);
+void        addClientToSet(ClientInfo *client);
 
 bool    processLoginPacket(ClientInfo *client);
 bool    processMessagePacket(ClientInfo *client);
