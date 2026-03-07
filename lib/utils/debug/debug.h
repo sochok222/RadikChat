@@ -21,8 +21,11 @@
 #elif DEBUG_LEVEL >= 4
 #define DBG_DEBUG(...)\
 	logMessage(DBG_MODE_DEBUG, __VA_ARGS__);
+#define DBG_FUNC() \
+    logMessage(DBG_MODE_DEBUG, __FUNCTION__);
 #else
 #define DBG_DEBUG(...)
+#define DBG_FUNC()
 #endif
 
 #if DEBUG_LEVEL >= 3
