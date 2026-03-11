@@ -22,6 +22,7 @@ void addClientToSet(ClientInfo *client)
 
 ClientInfo* getClient(SOCKET s)
 {
+    DBG_FUNC();
     ClientInfo *it = clients;
 
     while (it != NULL) {
@@ -46,6 +47,7 @@ ClientInfo* getClient(SOCKET s)
 
 void deleteClient(ClientInfo *client)
 {
+    DBG_FUNC();
     closesocket(client->socket);
     FD_CLR(client->socket, &fdMaster);
     ClientInfo **p = &clients;
@@ -92,56 +94,50 @@ fd_set waitForClients(SOCKET server)
     return fdReads;
 }
 
-bool processLoginPacket(ClientInfo *client)
+void processLoginPacket(ClientInfo *client)
 {
-    DBG_DEBUG("processLoginPacket\n");
-    char    *clientName = client->buffer + PACKET_HEADER_SIZE;
-    int     length = *((int*)(client->buffer + PACKET_TYPE_SIZE));
-    int     packetSize = PACKET_HEADER_SIZE + length;
+    DBG_FUNC();
+    ClientInfo  *it;
+    int         respond = PACKET_LOGIN_SUCCESS, respondType = PACKET_LOGIN_RESPOND, respondSize;
+    char        *nickname;
+    int         nicklen;
 
-    if (length > CLIENT_MAX_NICKNAME_SIZE) {
-        DBG_INFO("Client sent too long nickname\n")
-        memcpy(client->buffer,
-                client->buffer + packetSize,
-                packetSize);
-        client->receivedBytes -= packetSize;
-        return false;
+    // Check if nickname is null-terminated
+    nickname = (client->buffer + PACKET_LOGIN_NICKNAME_OFFSET);
+    if (*(nickname + *(int*)(client->buffer + PACKET_LOGIN_NICKNAME_SZ_OFFSET) - 1) != '\0') {
+        DBG_ERROR("Received not null-terminated nickname\n");
+        respond = PACKET_LOGIN_FAILURE;
     }
 
-    if (*(clientName + length - 1) != '\0')  {// Check if nickname is null-terminated
-        DBG_INFO("Client sent non null-terminated packet\n")
-        memcpy(client->buffer,
-                client->buffer + packetSize,
-                packetSize);
-        client->receivedBytes -= packetSize;
-        return false;
-    }
-
-    ClientInfo *iterator = clients;
-    while (iterator != NULL) {
-        if (strcmp(iterator->nickname, clientName) == 0) {
-            DBG_INFO("Client sent nickname that is already registered %s\n", clientName);
-            memcpy(client->buffer,
-                    client->buffer + packetSize,
-                    packetSize);
-            client->receivedBytes -= packetSize;
-            return false;
+    // Search if client with same nickname is registered
+    it = clients;
+    while (it != NULL) {
+        if (strcmp(it->nickname, nickname) == 0) {
+            DBG_INFO("Found same nickname\n");
+            respond = PACKET_LOGIN_FAILURE;
         }
-        iterator = iterator->next;
+        it = it->next;
     }
-    strcpy(client->nickname, clientName);
+
+    // Save nickname to client
+    strcpy(client->nickname, nickname);
     client->isLogined = true;
 
-    // Clear buffer
-    memcpy(client->buffer,
-            client->buffer + packetSize,
-            packetSize);
-    client->receivedBytes -= packetSize;
+    respondSize = PACKET_HEADER_SIZE + sizeof(respond);
 
-    return true;
+    // Send respond     size - type - id - respond
+    send(client->socket, (char*)&respondSize, sizeof(respondSize), 0);
+    send(client->socket, (char*)&respondType, sizeof(respondType), 0);
+    send(client->socket, client->buffer + PACKET_ID_OFFSET, sizeof(int), 0);
+    send(client->socket, (char*)&respond, sizeof(respond), 0);
 }
 
-bool processMessagePacket(ClientInfo *client)
+void processCreateChatPacket(ClientInfo *client)
 {
-    return true;
+
+}
+
+void processMessagePacket(ClientInfo *client)
+{
+
 }

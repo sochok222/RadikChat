@@ -20,9 +20,12 @@
 	log_message(DBG_MODE_DEBUG, __VA_ARGS__);
 #elif DEBUG_LEVEL >= 4
 #define DBG_DEBUG(...)\
+    logMessage(DBG_MODE_DEBUG, "[DEBUG]: ");\
 	logMessage(DBG_MODE_DEBUG, __VA_ARGS__);
 #define DBG_FUNC() \
-    logMessage(DBG_MODE_DEBUG, __FUNCTION__);
+    logMessage(DBG_MODE_DEBUG, "[FUNC]: ");\
+    logMessage(DBG_MODE_DEBUG, __FUNCTION__);\
+    logMessage(DBG_MODE_DEBUG, "\n");
 #else
 #define DBG_DEBUG(...)
 #define DBG_FUNC()

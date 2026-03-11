@@ -30,7 +30,8 @@ char*       getClientAddress(ClientInfo *client);
 fd_set      waitForClients(SOCKET server);
 void        addClientToSet(ClientInfo *client);
 
-bool    processLoginPacket(ClientInfo *client);
-bool    processMessagePacket(ClientInfo *client);
+void    processLoginPacket(ClientInfo *client);
+void    processCreateChatPacket(ClientInfo *client);
+void    processMessagePacket(ClientInfo *client);
 
 #endif //RADIKCHAT_SERVERUTILS_H

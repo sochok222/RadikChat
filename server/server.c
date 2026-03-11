@@ -50,7 +50,7 @@ int main(void)
 	            bytesReceived = recv(client->socket, client->buffer + client->receivedBytes, sizeof(client->buffer) - client->receivedBytes, 0);
 
 	            if (bytesReceived <= 0) {
-	                DBG_DEBUG("Disconnect from %s client", getClientAddress(client));
+	                DBG_DEBUG("Disconnect from %s client\n", getClientAddress(client));
 	                deleteClient(client);
 	                break;
 	            }
@@ -60,30 +60,16 @@ int main(void)
 	    }
 	    // Process packets
 	    client = clients;
-	    while (client != NULL && client->receivedBytes > PACKET_HEADER_SIZE) {
-	        packetType = *((int*)client->buffer);
-	        if (client->receivedBytes > PACKET_HEADER_SIZE) {
-	            if (packetType == TYPE_LOGIN) {
-	                DBG_DEBUG("Received login packet from %s client\n", getClientAddress(client));
-	                DBG_DEBUG("Expected to receive %d but received %d\n", *((int*)(client->buffer + PACKET_TYPE_SIZE)), client->receivedBytes - PACKET_HEADER_SIZE);
-	                if (*((int*)(client->buffer + PACKET_TYPE_SIZE)) > (client->receivedBytes - PACKET_HEADER_SIZE)) { // Check if full message received
-	                    client = client->next;
-	                    continue;
-	                }
-	                if (!processLoginPacket(client)) {
-	                    respond = TYPE_LOGIN_FAILURE;
-	                } else
-                        respond = TYPE_LOGIN_SUCCESS;
-                    int sended = send(client->socket, (char*)&respond, sizeof(respond), 0);
-	                DBG_INFO("Sended packet %d size\n", sended);
-	            } else if (packetType == TYPE_MESSAGE) {
-	                // Check if recipient nickname is full
-
-	                // Check if message is full
-
-	                // Process message
-	            }
+	    while (client != NULL && client->receivedBytes > PACKET_HEADER_SIZE && *(int*)(client->buffer + PACKET_SIZE_OFFSET) <= client->receivedBytes) {
+	        packetType = *(int*)(client->buffer + PACKET_TYPE_OFFSET);
+	        if (packetType == PACKET_LOGIN) {
+	            processLoginPacket(client);
+	        } else if (packetType == PACKET_CREATE_CHAT) {
+	            processCreateChatPacket(client);
 	        }
+	        // clear packet
+	        memmove(client->buffer, client->buffer + *(int*)(client->buffer + PACKET_SIZE_OFFSET), *(int*)(client->buffer + PACKET_SIZE_OFFSET));
+	        client->receivedBytes -= *(int*)(client->buffer + PACKET_SIZE_OFFSET);
 	        client = client->next;
 	    }
 	}
