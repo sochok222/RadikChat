@@ -27,5 +27,6 @@ void    socketThread(void*);
 extern PendingRequest *pendingRequests[MAX_PENDING_REQUESTS];
 extern SOCKET socketServer;
 extern HANDLE socketServerMutex;
+extern HANDLE socketThreadRunMutex;
 
 #endif //RADIKCHAT_CLIENTUTILS_H

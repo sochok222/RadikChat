@@ -100,7 +100,6 @@ void processLoginPacket(ClientInfo *client)
     ClientInfo  *it;
     int         respond = PACKET_LOGIN_SUCCESS, respondType = PACKET_LOGIN_RESPOND, respondSize;
     char        *nickname;
-    int         nicklen;
 
     // Check if nickname is null-terminated
     nickname = (client->buffer + PACKET_LOGIN_NICKNAME_OFFSET);

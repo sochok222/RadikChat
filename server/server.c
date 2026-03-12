@@ -18,9 +18,7 @@ int main(void)
 {
 	SOCKET      socketListen;
 	fd_set      fdReads;
-	int         bytesReceived;
-    int         packetType;
-    int        respond;
+	int         bytesReceived, packetType;
 
     serverInit();
 

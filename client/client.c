@@ -17,15 +17,18 @@
 #define SERVER_ADDRESS "192.168.0.184"
 #define SERVER_PORT "1423"
 
-SOCKET socketServer;
+SOCKET  socketServer = INVALID_SOCKET;
+HANDLE  socketThreadRunMutex;
 
 int main(void)
 {
     WSADATA wsadata;
-    int unread = 0, choice;
+    int     unread = 0, choice;
+    HANDLE  socketThreadMutex;
 
     initDebug();
     initChatHistory();
+    socketThreadRunMutex = CreateMutex(NULL, TRUE, NULL);
 
     if (WSAStartup(MAKEWORD(2, 2), &wsadata) != 0) {
         fprintf(stderr, "Error: Failed to initialize winsock\n");
@@ -37,7 +40,7 @@ int main(void)
         printf("Error creating socket\n");
         return 1;
     }
-    _beginthread(socketThread, 0, NULL);
+    socketThreadMutex = (HANDLE)_beginthread(socketThread, 0, NULL);
 
     if (!signIn(socketServer)) {
         closesocket(socketServer);
@@ -51,11 +54,13 @@ int main(void)
     while (1) {
         system("cls");
         printf("You have %d unread messages\n", unread);
-        printf("Enter command: 1-private chats; 2-create chat: ");
+        printf("Enter command: 1-private chats; 2-create chat; 0 - quit: ");
         fseek(stdin,0,SEEK_END);
         scanf("%d", choice);
 
         switch (choice) {
+        case 0:
+            goto exit;
         case 1:
             showPrivateChats();
         case 2:
@@ -67,8 +72,14 @@ int main(void)
         }
     }
 
-    // ReSharper disable once CppDFAUnreachableCode
-    closesocket(socketServer);
+    exit:
+    if (socketServer != INVALID_SOCKET)
+        closesocket(socketServer);
+
+    // Wait while thread stops
+    ReleaseMutex(socketThreadRunMutex);
+    WaitForSingleObject(socketThreadMutex, INFINITE);
+
     WSACleanup();
 }
 

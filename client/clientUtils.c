@@ -34,11 +34,10 @@ fd_set  waitForSeverRespond(SOCKET server, struct timeval *timeout)
 
 void socketThread(void*)
 {
-    int     received = 0, currentPacketSize = 0;
-    int     senderUsernameLen, senderMessageLen;
+    int     received = 0;
     char    readBuffer[MAX_READ_BUFFER_SIZE];
 
-    while (1) {
+    while (WaitForSingleObject(socketThreadRunMutex, 75L) == WAIT_TIMEOUT) {
         waitForSeverRespond(socketServer, 0);
 
         received += recv(socketServer, readBuffer + received, MAX_READ_BUFFER_SIZE - received, 0);
