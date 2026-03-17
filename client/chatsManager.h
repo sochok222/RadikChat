@@ -20,13 +20,16 @@ typedef struct sContact
 {
     char                *nickname;
     int                 unread;
-    struct ChatHistory  *chatHistory;
+    ChatHistory  chatHistory;
+    struct sContact     *next;
 } Contact;
 
 extern Contact *contacts;
+extern Contact *currentContact;
 
 void showPrivateChats(void);
 void createChat(SOCKET socket);
+void sendMessage(SOCKET socket);
 void deleteChat(const Contact *contact);
 bool signIn(const SOCKET socket);
 void updateUnreadMessages(void);

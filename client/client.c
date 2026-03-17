@@ -47,7 +47,7 @@ int main(void)
         WSACleanup();
         return 1;
     }
-    _sleep(3000);
+    _sleep(1500);
 
     socketServerMutex = CreateMutex(NULL, FALSE, NULL);
 
@@ -56,19 +56,21 @@ int main(void)
         printf("You have %d unread messages\n", unread);
         printf("Enter command: 1-private chats; 2-create chat; 0 - quit: ");
         fseek(stdin,0,SEEK_END);
-        scanf("%d", choice);
+        scanf("%d", &choice);
 
         switch (choice) {
         case 0:
             goto exit;
         case 1:
             showPrivateChats();
+            break;
         case 2:
             createChat(socketServer);
+            break;
         case 3:
             updateUnreadMessages();
-        default:
             break;
+        default:
         }
     }
 

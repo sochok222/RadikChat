@@ -20,11 +20,13 @@ typedef struct sPendingRequest
 
 void    initClientUtils();
 fd_set  waitForSeverRespond(SOCKET server, struct timeval *timeout);
-void    createRequest(PendingRequest request);
-void    deleteRequest(PendingRequest request);
 void    socketThread(void*);
 
+PendingRequest  *createRequest(void);
+void            deleteRequest(PendingRequest *request);
+
 extern PendingRequest *pendingRequests[MAX_PENDING_REQUESTS];
+
 extern SOCKET socketServer;
 extern HANDLE socketServerMutex;
 extern HANDLE socketThreadRunMutex;

@@ -47,7 +47,7 @@ int main(void)
 	        if (FD_ISSET(client->socket, &fdReads)) {
 	            bytesReceived = recv(client->socket, client->buffer + client->receivedBytes, sizeof(client->buffer) - client->receivedBytes, 0);
 
-	            if (bytesReceived <= 0) {
+	            if (bytesReceived <= 0 && errno != EAGAIN) {
 	                DBG_DEBUG("Disconnect from %s client\n", getClientAddress(client));
 	                deleteClient(client);
 	                break;
@@ -64,10 +64,12 @@ int main(void)
 	            processLoginPacket(client);
 	        } else if (packetType == PACKET_CREATE_CHAT) {
 	            processCreateChatPacket(client);
+	        } else if (packetType == PACKET_MESSAGE) {
+	            processMessagePacket(client);
 	        }
 	        // clear packet
-	        memmove(client->buffer, client->buffer + *(int*)(client->buffer + PACKET_SIZE_OFFSET), *(int*)(client->buffer + PACKET_SIZE_OFFSET));
 	        client->receivedBytes -= *(int*)(client->buffer + PACKET_SIZE_OFFSET);
+	        memmove(client->buffer, client->buffer + *(int*)(client->buffer + PACKET_SIZE_OFFSET), *(int*)(client->buffer + PACKET_SIZE_OFFSET));
 	        client = client->next;
 	    }
 	}

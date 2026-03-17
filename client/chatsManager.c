@@ -11,9 +11,12 @@
 
 #include "clientUtils.h"
 
-#define NICKNAME_SIZE 20
+
 
 Contact *contacts;
+Contact *currentContact = NULL;
+
+static int readInput(FILE *fp, char *buffer, size_t bufferSize);
 
 void initChatHistory(void)
 {
@@ -23,37 +26,25 @@ void initChatHistory(void)
 bool signIn(const SOCKET socket)
 {
     DBG_FUNC();
-    char    nickname[NICKNAME_SIZE+1];
+    char    nickname[NICKNAME_LEN+1];
     int     nicknameLen, type = PACKET_LOGIN, i, packetSize = 0;
     bool    result = false;
 
-    PendingRequest * request = nullptr;
+    PendingRequest * request;
 
     printf("Enter nickname or q to quit: ");
-    scanf("%20s", nickname);
+    readInput(stdin, nickname, NICKNAME_LEN);
     if (strcmp(nickname, "q") == 0)
         return false;
     nicknameLen = strlen(nickname) + 1;
 
-    for (i = 0; i < MAX_PENDING_REQUESTS; i++) {
-        if (pendingRequests[i] == NULL) {
-            request = (pendingRequests[i] = malloc(sizeof(PendingRequest)));
-            if (request == NULL) {
-                DBG_FATAL("malloc failed");
-                return false;
-            }
-            request->buffer = malloc(MAX_PENDING_REQUESTS_BUFFER_SIZE);
-            if (request->buffer == NULL) {
-                DBG_FATAL("malloc failed");
-                free(request);
-                return false;
-            }
-            request->requestId = i;
-            break;
-        }
+    request = createRequest();
+    if (request == NULL) {
+        DBG_FATAL("Failed to create request\n");
+        return false;
     }
 
-    packetSize = PACKET_SIZE_SIZE + PACKET_TYPE_SIZE + PACKET_ID_SIZE + nicknameLen;
+    packetSize = PACKET_HEADER_SIZE + PACKET_LOGIN_NICKNAME_LEN + nicknameLen;
 
     WaitForSingleObject(socketServerMutex, INFINITE);
     send(socket, (char*)&packetSize, sizeof(packetSize), 0);
@@ -63,30 +54,35 @@ bool signIn(const SOCKET socket)
     send(socket, nickname, nicknameLen, 0);
     ReleaseMutex(socketServerMutex);
 
-    /* TODO move pending request initialization to function and add handling for
-     * event or mutex creation failure */
-    request->bufferSize = 0;
-    request->event = CreateEvent(NULL, FALSE, FALSE, NULL);
-    request->mutex = CreateMutex(NULL, FALSE, NULL);
-
     WaitForSingleObject(request->event, INFINITE);
     WaitForSingleObject(request->mutex, INFINITE);
 
-    if (request->bufferSize != 16) {
-        DBG_WARNING("Expected different packet size\n");
+    if (request->bufferSize < PACKET_HEADER_SIZE) {
+        DBG_ERROR("Expected different packet size\n");
+        deleteRequest(request);
+        return false;
     }
 
-    if (*(int*)(request->buffer + PACKET_PAYLOAD_OFFSET) == PACKET_LOGIN_SUCCESS) {
-        DBG_INFO("Login success\n");
-        result =  true;
-        goto clearRequest;
-    }
-    DBG_INFO("Login failed\n");
     result = false;
+    switch (*(int*)(request->buffer + PACKET_TYPE_OFFSET)) {
+    case PACKET_LOGIN_SUCCESS:
+        DBG_INFO("Login success\n");
+        result = true;
+        break;
+    case PACKET_LOGIN_FAILURE:
+        DBG_ERROR("Login failed\n");
+        break;
+    case PACKET_LOGIN_ALREADY_EXISTS:
+        DBG_INFO("User with this username already exists\n");
+        break;
+    case PACKET_ERROR_CANT_PROCESS: case PACKET_ITERNAL_SERVER_ERROR:
+        DBG_ERROR("Server error\n");
+        break;
+    default:
+        DBG_ERROR("Unknown respond (%d)\n", *(int*)(request->buffer + PACKET_TYPE_OFFSET));
+    }
 
-    clearRequest:
-    free(request);
-    request = NULL;
+    deleteRequest(request);
     return result;
 }
 
@@ -102,12 +98,150 @@ void showPrivateChats(void)
 
     while (contact != NULL) {
         printf("%s - unread: %d\n", contact->nickname, contact->unread);
+        contact = contact->next;
     }
+}
+
+void sendMessage(SOCKET socket)
+{
+    DBG_FUNC();
+    PendingRequest  *request;
+    char            *nickname = NULL;
+    char            message[MAX_MESSAGE_LEN+1];
+    int             nicknameLen, messageLen, packetLen,
+                    try = 0, packetType = PACKET_MESSAGE;
+
+    if (currentContact == NULL) {
+        DBG_ERROR("No contact is selected\n");
+        return;
+    }
+    nickname = currentContact->nickname;
+
+    printf("Enter message: ");
+    readInput(stdin, message, MAX_MESSAGE_LEN);
+
+    nicknameLen = strlen(nickname) + 1;
+    messageLen = strlen(message) + 1;
+
+    packetLen = PACKET_HEADER_SIZE + sizeof(nicknameLen) + nicknameLen + sizeof(messageLen) + messageLen;
+
+    tryAgain:
+    request = createRequest();
+    if (request == NULL) {
+        DBG_FATAL("Failed to create request\n");
+        return;
+    }
+
+    WaitForSingleObject(socketServerMutex, INFINITE);
+    send(socket, (char*)&packetLen, sizeof(packetLen), 0);
+    send(socket, (char*)&packetType, sizeof(packetType), 0);
+    send(socket, (char*)&request->requestId, sizeof(request->requestId), 0);
+    send(socket, (char*)&nicknameLen, sizeof(nicknameLen), 0);
+    send(socket, nickname, nicknameLen, 0);
+    send(socket, (char*)&messageLen, sizeof(messageLen), 0);
+    send(socket, message, messageLen, 0);
+    ReleaseMutex(socketServerMutex);
+
+    WaitForSingleObject(request->event, INFINITE);
+    WaitForSingleObject(request->mutex, INFINITE);
+
+    if (request->bufferSize < PACKET_HEADER_SIZE && try++ < MAX_RETRIES) {
+        DBG_WARNING("Respond too short, trying again (%d)\n", try);
+        deleteRequest(request);
+        goto tryAgain;
+    }
+    if (request->bufferSize < PACKET_HEADER_SIZE) {
+        DBG_ERROR("Respond too short\n");
+        deleteRequest(request);
+        return;
+    }
+
+    switch (*(int*)(request->buffer + PACKET_TYPE_OFFSET)) {
+    case PACKET_MESSAGE_SUCCESS:
+        DBG_INFO("Message sent\n");
+        break;
+    case PACKET_MESSAGE_FAILURE:
+        DBG_ERROR("Message failed\n");
+        break;
+    case PACKET_MESSAGE_CLIENT_NOT_FOUND:
+        DBG_INFO("Client not found\n");
+        break;
+    case PACKET_ITERNAL_SERVER_ERROR:
+        DBG_WARNING("Internal Server Error\n");
+        break;
+    default:
+        DBG_WARNING("Unknown respond\n");
+    }
+    deleteRequest(request);
+    _sleep(1500);
 }
 
 void createChat(SOCKET socket)
 {
+    DBG_FUNC();
+    PendingRequest  *request;
+    int             packetType = PACKET_CREATE_CHAT,
+                    packetLen = 0, nicknameLen,
+                    try = 0;
+    char            nickname[NICKNAME_LEN+1];
 
+    printf("Enter nickname or q to quit: ");
+    readInput(stdin, nickname, NICKNAME_LEN);
+
+    if (strcmp(nickname, "q") == 0)
+        return;
+    nicknameLen = strlen(nickname) + 1;
+
+    tryAgain:
+    request = createRequest();
+    if (request == NULL) {
+        DBG_FATAL("Failed to create request\n");
+        return;
+    }
+
+    packetLen = PACKET_HEADER_SIZE + sizeof(nicknameLen) + nicknameLen;
+    WaitForSingleObject(socketServerMutex, INFINITE);
+    send(socket, (char*)&packetLen, sizeof(packetLen), 0);
+    send(socket, (char*)&packetType, sizeof(packetType), 0);
+    send(socket, (char*)&request->requestId, sizeof(request->requestId), 0);
+    send(socket, (char*)&nicknameLen, sizeof(nicknameLen), 0);
+    send(socket, nickname, nicknameLen, 0);
+    ReleaseMutex(socketServerMutex);
+
+    WaitForSingleObject(request->event, INFINITE);
+    WaitForSingleObject(request->mutex, INFINITE);
+
+    if (request->bufferSize < PACKET_HEADER_SIZE && try++ < MAX_RETRIES) {
+        DBG_WARNING("Respond too short, trying again (%d)\n", try);
+        deleteRequest(request);
+        goto tryAgain;
+    }
+    if (request->bufferSize < PACKET_HEADER_SIZE) {
+        DBG_ERROR("Respond too short\n");
+        deleteRequest(request);
+        return;
+    }
+    switch (*(int*)(request->buffer + PACKET_TYPE_OFFSET)) {
+    case PACKET_MESSAGE_SUCCESS:
+        DBG_INFO("Message sent\n");
+        break;
+    case PACKET_MESSAGE_FAILURE:
+        DBG_ERROR("Message failed\n");
+        break;
+    case PACKET_MESSAGE_CLIENT_NOT_FOUND:
+        DBG_INFO("Client not found\n");
+        break;
+    case PACKET_ITERNAL_SERVER_ERROR:
+        DBG_ERROR("Internal Server Error\n");
+        break;
+    case PACKET_CREATE_CHAT_ITS_YOUR_NICK:
+        DBG_INFO("Thats your nickname\n");
+        break;
+    default:
+        DBG_WARNING("Unknown respond\n");
+    }
+    deleteRequest(request);
+    _sleep(1500);
 }
 
 void deleteChat(const Contact *contact)
@@ -118,4 +252,12 @@ void deleteChat(const Contact *contact)
 void updateUnreadMessages(void)
 {
     DBG_FUNC();
+}
+
+static int readInput(FILE *fp, char *buffer, size_t bufferSize)
+{
+    char format[16];
+    snprintf(format, sizeof(format), "%%%zus", bufferSize);
+    fseek(fp, 0, SEEK_END);
+    return fscanf(fp, format, buffer);
 }
