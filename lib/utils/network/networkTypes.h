@@ -33,6 +33,8 @@
 #define MAX_MESSAGE_LEN 250
 #define MAX_RETRIES 10
 
+
+
 typedef enum ePacketType
 {
     PACKET_CREATE_CHAT,
@@ -63,8 +65,19 @@ typedef struct sPacket
     size_t  capacity;
 } Packet;
 
+typedef enum ePacketFieldType
+{
+    FIELD_TYPE_INT,
+    FIELD_TYPE_UINT,
+    FIELD_TYPE_STRING,
+} PacketFieldType;
+
 Packet  createPacket(PacketType type);
 void    deletePacket(Packet packet);
+
+// WARNING Caller MUST free memory returned from this functions
+int     *readPacketInt(Packet *p, size_t *pos);
+char    *readPacketString(Packet *p, size_t *pos);
 
 void appendToPacket(Packet *p, void *buff, size_t len);
 void addPacketInt(Packet *p, int val);
