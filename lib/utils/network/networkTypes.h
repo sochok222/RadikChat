@@ -1,6 +1,8 @@
 #ifndef RADIKCHAT_NETWORKTYPES_H
 #define RADIKCHAT_NETWORKTYPES_H
 
+#include <stdint.h>
+
 #define PACKET_SIZE_SIZE 4
 #define PACKET_TYPE_SIZE 4
 #define PACKET_ID_SIZE 4
@@ -31,22 +33,6 @@
 #define MAX_MESSAGE_LEN 250
 #define MAX_RETRIES 10
 
-/* PACKET structure
- * 0-3bytes     - packetSize
- * 4-7bytes     - packetType
- * 8-11bytes    - packetId
- * 12-*         - payload
- */
-
-/* Login payload
- * 12-15bytes   - nicknameLen
- * 16-*bytes    - nickname
- */
-
-/* Login respond payload
- * 12-15bytes   - fail/success
- */
-
 typedef enum ePacketType
 {
     PACKET_CREATE_CHAT,
@@ -67,6 +53,38 @@ typedef enum ePacketType
 
     PACKET_ERROR_CANT_PROCESS,
     PACKET_ITERNAL_SERVER_ERROR,
-} enumPacketType;
+} PacketType;
+
+typedef struct sPacket
+{
+    uint8_t *data;
+    PacketType type;
+    size_t  size;
+    size_t  capacity;
+} Packet;
+
+Packet  createPacket(PacketType type);
+void    deletePacket(Packet packet);
+
+void appendToPacket(Packet *p, void *buff, size_t len);
+void addPacketInt(Packet *p, int val);
+void addPacketString(Packet *p, char *string);
+
+/* PACKET structure
+ * 0-3bytes     - packetSize
+ * 4-7bytes     - packetType
+ * 8-11bytes    - packetId
+ * 12-*         - payload
+ */
+
+/* Login payload
+ * 12-15bytes   - nicknameLen
+ * 16-*bytes    - nickname
+ */
+
+/* Login respond payload
+ * 12-15bytes   - fail/success
+ */
+
 
 #endif //RADIKCHAT_NETWORKTYPES_H

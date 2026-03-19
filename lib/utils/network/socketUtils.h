@@ -21,4 +21,6 @@ SOCKET createActiveSocket(const char *host, const char *port, const int socktype
  ***********************************************************/
 SOCKET createPassiveSocket(const char *port, const int socktype, const int family, const int backlog);
 
+bool sendPacket(HANDLE *mutex, SOCKET socket, ...);
+
 #endif /* SOCKET_UTILS_H */
