@@ -183,7 +183,7 @@ void processCreateChatPacket(ClientInfo *client)
     send(client->socket, (char*)&respondSize, sizeof(respondSize), 0);
     send(client->socket, (char*)&respond, sizeof(respond), 0);
     send(client->socket, client->buffer + PACKET_ID_OFFSET, sizeof(int), 0);
-    if (nickname == NULL)
+    if (nickname != NULL)
         free(nickname);
 }
 
