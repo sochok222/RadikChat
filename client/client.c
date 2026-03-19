@@ -28,6 +28,7 @@ int main(void)
 
     initDebug();
     initChatHistory();
+    system("cls");
     socketThreadRunMutex = CreateMutex(NULL, TRUE, NULL);
 
     if (WSAStartup(MAKEWORD(2, 2), &wsadata) != 0) {

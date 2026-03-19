@@ -177,6 +177,7 @@ void processCreateChatPacket(ClientInfo *client)
         }
         it = it->next;
     }
+    respond = PACKET_MESSAGE_CLIENT_NOT_FOUND;
 
     sendRespond:
     send(client->socket, (char*)&respondSize, sizeof(respondSize), 0);

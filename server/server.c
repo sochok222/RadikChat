@@ -58,7 +58,11 @@ int main(void)
 	    }
 	    // Process packets
 	    client = clients;
-	    while (client != NULL && client->receivedBytes > PACKET_HEADER_SIZE && *(int*)(client->buffer + PACKET_SIZE_OFFSET) <= client->receivedBytes) {
+	    while (client != NULL) {
+	        if (client->receivedBytes < PACKET_HEADER_SIZE || *(int*)(client->buffer + PACKET_SIZE_OFFSET) > client->receivedBytes) {
+	            client = client->next;
+	            continue;
+	        }
 	        packetType = *(int*)(client->buffer + PACKET_TYPE_OFFSET);
 	        if (packetType == PACKET_LOGIN) {
 	            processLoginPacket(client);
