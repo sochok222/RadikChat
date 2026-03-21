@@ -43,7 +43,7 @@ int main(void)
     }
     socketThreadMutex = (HANDLE)_beginthread(socketThread, 0, NULL);
 
-    if (!signIn(socketServer)) {
+    if (!logIn(socketServer)) {
         closesocket(socketServer);
         WSACleanup();
         return 1;

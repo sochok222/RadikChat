@@ -98,15 +98,23 @@ void processLoginPacket(ClientInfo *client)
 {
     DBG_FUNC();
     ClientInfo  *it;
-    int         respond = PACKET_LOGIN_FAILURE, respondSize;
+    int         respond = PACKET_LOGIN_FAILURE,
+                requestId;
     char        *nickname;
+    size_t      readPos = 0;
+    Packet      in, out;
 
-    // Check if nickname is null-terminated
-    nickname = (client->buffer + PACKET_LOGIN_NICKNAME_OFFSET);
-    if (*(nickname + *(int*)(client->buffer + PACKET_LOGIN_NICKNAME_LEN_OFFSET) - 1) != '\0') {
-        DBG_ERROR("Received not null-terminated nickname\n");
-        respond = PACKET_LOGIN_FAILURE;
-        goto sendRespond;
+    in = packetFromBytes(client->buffer);
+    if (in.data == NULL)
+        return;
+
+    requestId = *(int*)(client->buffer + PACKET_ID_OFFSET);
+    out = createPacket(PACKET_LOGIN_RESPOND, requestId);
+
+    if ((nickname = readPacketString(&in, &readPos)) == NULL) {
+        DBG_ERROR("Can't read nickname\n");
+        respond = PACKET_ERROR_CANT_READ;
+        goto sendPacket;
     }
 
     // Search if client with same nickname is registered
@@ -115,7 +123,7 @@ void processLoginPacket(ClientInfo *client)
         if (strcmp(it->nickname, nickname) == 0) {
             DBG_INFO("Found same nickname\n");
             respond = PACKET_LOGIN_ALREADY_EXISTS;
-            goto sendRespond;
+            goto sendPacket;
         }
         it = it->next;
     }
@@ -125,122 +133,118 @@ void processLoginPacket(ClientInfo *client)
     strcpy(client->nickname, nickname);
     client->isLogined = true;
 
-    respondSize = PACKET_HEADER_SIZE;
-
-    sendRespond:
-    // Send respond     size - type - id - respond
-    send(client->socket, (char*)&respondSize, sizeof(respondSize), 0);
-    send(client->socket, (char*)&respond, sizeof(respond), 0);
-    send(client->socket, client->buffer + PACKET_ID_OFFSET, sizeof(int), 0);
+sendPacket:
+    addPacketInt(&out, respond);
+    sendPacket(client->socket, out, NULL);
 }
 
 void processCreateChatPacket(ClientInfo *client)
 {
-    DBG_FUNC();
-    ClientInfo  *it = clients;
-    int         nicknameLen, respond = PACKET_CREATE_CHAT_FAILURE,
-                respondSize = PACKET_HEADER_SIZE;
-    char        *nickname = NULL;
-
-    if (client->receivedBytes < PACKET_HEADER_SIZE +
-                                *(int*)(client->buffer + PACKET_CREATE_CHAT_NICKNAME_LEN_OFFSET) +
-                                PACKET_CREATE_CHAT_NICKNAME_LEN) {
-        respond = PACKET_MESSAGE_FAILURE;
-        goto sendRespond;
-    }
-
-    if ((nicknameLen = *(int*)(client->buffer + PACKET_CREATE_CHAT_NICKNAME_LEN_OFFSET)) > NICKNAME_LEN + 1) {
-        respond = PACKET_MESSAGE_FAILURE;
-        goto sendRespond;
-    }
-    nickname = malloc(nicknameLen);
-    if (nickname == NULL) {
-        respond = PACKET_ITERNAL_SERVER_ERROR;
-        goto sendRespond;
-    }
-    memcpy(nickname, client->buffer + PACKET_MESSAGE_NICKNAME_OFFSET, nicknameLen);
-    if (*(nickname + nicknameLen - 1) != '\0') {
-        DBG_WARNING("Received not null-terminated nickname\n");
-        respond = PACKET_MESSAGE_FAILURE;
-        goto sendRespond;
-    }
-    if (strcmp(nickname, client->nickname) == 0) {
-        DBG_INFO("Client tries to create chat with himself\n");
-        respond = PACKET_CREATE_CHAT_ITS_YOUR_NICK;
-        goto sendRespond;
-    }
-
-    while (it != NULL) {
-        if (strcmp(nickname, it->nickname) == 0) {
-            respond = PACKET_MESSAGE_SUCCESS;
-            goto sendRespond;
-        }
-        it = it->next;
-    }
-    respond = PACKET_MESSAGE_CLIENT_NOT_FOUND;
-
-    sendRespond:
-    send(client->socket, (char*)&respondSize, sizeof(respondSize), 0);
-    send(client->socket, (char*)&respond, sizeof(respond), 0);
-    send(client->socket, client->buffer + PACKET_ID_OFFSET, sizeof(int), 0);
-    if (nickname != NULL)
-        free(nickname);
+//     DBG_FUNC();
+//     ClientInfo  *it = clients;
+//     int         nicknameLen, respond = PACKET_CREATE_CHAT_FAILURE,
+//                 respondSize = PACKET_HEADER_SIZE;
+//     char        *nickname = NULL;
+//
+//     if (client->receivedBytes < PACKET_HEADER_SIZE +
+//                                 *(int*)(client->buffer + PACKET_CREATE_CHAT_NICKNAME_LEN_OFFSET) +
+//                                 PACKET_CREATE_CHAT_NICKNAME_LEN) {
+//         respond = PACKET_MESSAGE_FAILURE;
+//         goto sendRespond;
+//     }
+//
+//     if ((nicknameLen = *(int*)(client->buffer + PACKET_CREATE_CHAT_NICKNAME_LEN_OFFSET)) > NICKNAME_LEN + 1) {
+//         respond = PACKET_MESSAGE_FAILURE;
+//         goto sendRespond;
+//     }
+//     nickname = malloc(nicknameLen);
+//     if (nickname == NULL) {
+//         respond = PACKET_ITERNAL_SERVER_ERROR;
+//         goto sendRespond;
+//     }
+//     memcpy(nickname, client->buffer + PACKET_MESSAGE_NICKNAME_OFFSET, nicknameLen);
+//     if (*(nickname + nicknameLen - 1) != '\0') {
+//         DBG_WARNING("Received not null-terminated nickname\n");
+//         respond = PACKET_MESSAGE_FAILURE;
+//         goto sendRespond;
+//     }
+//     if (strcmp(nickname, client->nickname) == 0) {
+//         DBG_INFO("Client tries to create chat with himself\n");
+//         respond = PACKET_CREATE_CHAT_ITS_YOUR_NICK;
+//         goto sendRespond;
+//     }
+//
+//     while (it != NULL) {
+//         if (strcmp(nickname, it->nickname) == 0) {
+//             respond = PACKET_MESSAGE_SUCCESS;
+//             goto sendRespond;
+//         }
+//         it = it->next;
+//     }
+//     respond = PACKET_MESSAGE_CLIENT_NOT_FOUND;
+//
+//     sendRespond:
+//     send(client->socket, (char*)&respondSize, sizeof(respondSize), 0);
+//     send(client->socket, (char*)&respond, sizeof(respond), 0);
+//     send(client->socket, client->buffer + PACKET_ID_OFFSET, sizeof(int), 0);
+//     if (nickname != NULL)
+//         free(nickname);
 }
-
+//
 void processMessagePacket(ClientInfo *client)
 {
-    DBG_FUNC();
-    ClientInfo  *it = clients;
-    int         nicknameLen, textLen,
-                respond = PACKET_MESSAGE_FAILURE,
-                respondSize;
-    char        *nickname = NULL, *text = NULL;
-
-    if (client->receivedBytes < PACKET_HEADER_SIZE + PACKET_MESSAGE_NICKNAME_LEN + sizeof(char)
-                                + PACKET_MESSAGE_TEXT_LEN + sizeof(char)) {
-        respond = PACKET_MESSAGE_FAILURE;
-        goto sendRespond;
-    }
-
-    if ((nicknameLen = *(int*)(client->buffer + PACKET_MESSAGE_NICKNAME_LEN_OFFSET)) > NICKNAME_LEN + 1) {
-        respond = PACKET_MESSAGE_FAILURE;
-        goto sendRespond;
-    }
-    nickname = malloc(nicknameLen);
-    if (nickname == NULL) {
-        respond = PACKET_ITERNAL_SERVER_ERROR;
-        goto sendRespond;
-    }
-    memcpy(nickname, client->buffer + PACKET_MESSAGE_NICKNAME_OFFSET, nicknameLen);
-
-    if ((textLen = *(int*)(client->buffer + PACKET_MESSAGE_NICKNAME_OFFSET + nicknameLen)) > MAX_MESSAGE_LEN + 1) {
-        respond = PACKET_MESSAGE_FAILURE;
-        goto sendRespond;
-    }
-    text = malloc(textLen);
-    if (text == NULL) {
-        respond = PACKET_ITERNAL_SERVER_ERROR;
-        goto sendRespond;
-    }
-    memcpy(text, client->buffer + PACKET_MESSAGE_NICKNAME_OFFSET + nicknameLen + PACKET_MESSAGE_TEXT_LEN, textLen);
-
-    while (it != NULL) {
-        if (strcmp(nickname, it->nickname) == 0 && strcmp(nickname, client->nickname) == 0) {
-           respond = PACKET_MESSAGE_SUCCESS;
-            break;
-        }
-        it = it->next;
-    }
-    if (respond != PACKET_MESSAGE_SUCCESS)
-        respond = PACKET_MESSAGE_CLIENT_NOT_FOUND;
-
-sendRespond:
-    respondSize = PACKET_HEADER_SIZE;
-    send(client->socket, (char*)&respondSize, sizeof(respondSize), 0);
-    send(client->socket, (char*)&respond, sizeof(respond), 0);
-    send(client->socket, client->buffer + PACKET_ID_OFFSET, sizeof(int), 0);
-    if (text != NULL)
-        free(text);
-    if (nickname != NULL)
-        free(nickname);
+//     DBG_FUNC();
+//     ClientInfo  *it = clients;
+//     int         nicknameLen, textLen,
+//                 respond = PACKET_MESSAGE_FAILURE,
+//                 respondSize;
+//     char        *nickname = NULL, *text = NULL;
+//
+//     if (client->receivedBytes < PACKET_HEADER_SIZE + PACKET_MESSAGE_NICKNAME_LEN + sizeof(char)
+//                                 + PACKET_MESSAGE_TEXT_LEN + sizeof(char)) {
+//         respond = PACKET_MESSAGE_FAILURE;
+//         goto sendRespond;
+//     }
+//
+//     if ((nicknameLen = *(int*)(client->buffer + PACKET_MESSAGE_NICKNAME_LEN_OFFSET)) > NICKNAME_LEN + 1) {
+//         respond = PACKET_MESSAGE_FAILURE;
+//         goto sendRespond;
+//     }
+//     nickname = malloc(nicknameLen);
+//     if (nickname == NULL) {
+//         respond = PACKET_ITERNAL_SERVER_ERROR;
+//         goto sendRespond;
+//     }
+//     memcpy(nickname, client->buffer + PACKET_MESSAGE_NICKNAME_OFFSET, nicknameLen);
+//
+//     if ((textLen = *(int*)(client->buffer + PACKET_MESSAGE_NICKNAME_OFFSET + nicknameLen)) > MAX_MESSAGE_LEN + 1) {
+//         respond = PACKET_MESSAGE_FAILURE;
+//         goto sendRespond;
+//     }
+//     text = malloc(textLen);
+//     if (text == NULL) {
+//         respond = PACKET_ITERNAL_SERVER_ERROR;
+//         goto sendRespond;
+//     }
+//     memcpy(text, client->buffer + PACKET_MESSAGE_NICKNAME_OFFSET + nicknameLen + PACKET_MESSAGE_TEXT_LEN, textLen);
+//
+//     while (it != NULL) {
+//         if (strcmp(nickname, it->nickname) == 0 && strcmp(nickname, client->nickname) == 0) {
+//            respond = PACKET_MESSAGE_SUCCESS;
+//             break;
+//         }
+//         it = it->next;
+//     }
+//     if (respond != PACKET_MESSAGE_SUCCESS)
+//         respond = PACKET_MESSAGE_CLIENT_NOT_FOUND;
+//
+// sendRespond:
+//     respondSize = PACKET_HEADER_SIZE;
+//     send(client->socket, (char*)&respondSize, sizeof(respondSize), 0);
+//     send(client->socket, (char*)&respond, sizeof(respond), 0);
+//     send(client->socket, client->buffer + PACKET_ID_OFFSET, sizeof(int), 0);
+//     if (text != NULL)
+//         free(text);
+//     if (nickname != NULL)
+//         free(nickname);
 }

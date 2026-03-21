@@ -2,38 +2,16 @@
 #define RADIKCHAT_NETWORKTYPES_H
 
 #include <stdint.h>
-
-#define PACKET_SIZE_SIZE 4
-#define PACKET_TYPE_SIZE 4
-#define PACKET_ID_SIZE 4
-#define PACKET_HEADER_SIZE (PACKET_SIZE_SIZE + PACKET_TYPE_SIZE + PACKET_ID_SIZE)
-
-#define PACKET_SIZE_OFFSET 0
-#define PACKET_TYPE_OFFSET 4
-#define PACKET_ID_OFFSET 8
-#define PACKET_PAYLOAD_OFFSET 12
-
-#define PACKET_LOGIN_NICKNAME_LEN_OFFSET 12
-#define PACKET_LOGIN_NICKNAME_OFFSET 16
-
-#define PACKET_LOGIN_NICKNAME_LEN 4
-
-#define PACKET_MESSAGE_NICKNAME_LEN_OFFSET 12
-#define PACKET_MESSAGE_NICKNAME_OFFSET 16
-
-#define PACKET_MESSAGE_NICKNAME_LEN 4
-#define PACKET_MESSAGE_TEXT_LEN 4
-
-#define PACKET_CREATE_CHAT_NICKNAME_LEN_OFFSET 12
-#define PACKET_CREATE_CHAT_NICKNAME_OFFSET 16
-
-#define PACKET_CREATE_CHAT_NICKNAME_LEN 4
+#include <windows.h>
 
 #define NICKNAME_LEN 20
 #define MAX_MESSAGE_LEN 250
 #define MAX_RETRIES 10
 
-
+#define PACKET_HEADER_SIZE (sizeof(((Packet*)(0))->size) + sizeof(((Packet*)(0))->type) + sizeof(((Packet*)(0))->id))
+#define PACKET_SIZE_OFFSET (0)
+#define PACKET_TYPE_OFFSET (sizeof(((Packet*)(0))->size))
+#define PACKET_ID_OFFSET (sizeof(((Packet*)(0))->size) + sizeof(((Packet*)(0))->type))
 
 typedef enum ePacketType
 {
@@ -48,11 +26,13 @@ typedef enum ePacketType
     PACKET_MESSAGE_CLIENT_NOT_FOUND,
     PACKET_MESSAGE_SUCCESS,
 
-    PACKET_LOGIN,
+    PACKET_LOGIN_REQUEST,
+    PACKET_LOGIN_RESPOND,
     PACKET_LOGIN_FAILURE,
     PACKET_LOGIN_SUCCESS,
     PACKET_LOGIN_ALREADY_EXISTS,
 
+    PACKET_ERROR_CANT_READ,
     PACKET_ERROR_CANT_PROCESS,
     PACKET_ITERNAL_SERVER_ERROR,
 } PacketType;
@@ -63,6 +43,7 @@ typedef struct sPacket
     PacketType type;
     size_t  size;
     size_t  capacity;
+    int id;
 } Packet;
 
 typedef enum ePacketFieldType
@@ -72,8 +53,10 @@ typedef enum ePacketFieldType
     FIELD_TYPE_STRING,
 } PacketFieldType;
 
-Packet  createPacket(PacketType type);
+Packet  createPacket(PacketType type, int id);
+Packet  packetFromBytes(char *data);
 void    deletePacket(Packet packet);
+void    sendPacket(SOCKET socket, Packet packet, HANDLE *socketMutex);
 
 // WARNING Caller MUST free memory returned from this functions
 int     *readPacketInt(Packet *p, size_t *pos);

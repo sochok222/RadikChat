@@ -23,12 +23,14 @@ void initChatHistory(void)
     contacts = NULL;
 }
 
-bool signIn(const SOCKET socket)
+bool logIn(const SOCKET socket)
 {
     DBG_FUNC();
     char    nickname[NICKNAME_LEN+1];
-    int     nicknameLen, type = PACKET_LOGIN, i, packetSize = 0;
+    int     *inType;
+    size_t  readPos = 0;
     bool    result = false;
+    Packet  out, in;
 
     PendingRequest * request;
 
@@ -36,7 +38,6 @@ bool signIn(const SOCKET socket)
     readInput(stdin, nickname, NICKNAME_LEN);
     if (strcmp(nickname, "q") == 0)
         return false;
-    nicknameLen = strlen(nickname) + 1;
 
     request = createRequest();
     if (request == NULL) {
@@ -44,27 +45,29 @@ bool signIn(const SOCKET socket)
         return false;
     }
 
-    packetSize = PACKET_HEADER_SIZE + PACKET_LOGIN_NICKNAME_LEN + nicknameLen;
-
-    WaitForSingleObject(socketServerMutex, INFINITE);
-    send(socket, (char*)&packetSize, sizeof(packetSize), 0);
-    send(socket, (char*)&type, sizeof(type), 0);
-    send(socket, (char*)&request->requestId, sizeof(request->requestId), 0);
-    send(socket, (char*)&nicknameLen, sizeof(nicknameLen), 0);
-    send(socket, nickname, nicknameLen, 0);
-    ReleaseMutex(socketServerMutex);
+    out = createPacket(PACKET_LOGIN_REQUEST, request->id);
+    addPacketString(&out, nickname);
+    sendPacket(socket, out, socketServerMutex);
 
     WaitForSingleObject(request->event, INFINITE);
     WaitForSingleObject(request->mutex, INFINITE);
 
-    if (request->bufferSize < PACKET_HEADER_SIZE) {
-        DBG_ERROR("Expected different packet size\n");
-        deleteRequest(request);
-        return false;
+    in = packetFromBytes(request->data);
+    if (in.data == NULL) {
+        result = false;
+        goto clear;
+    }
+    if (in.type != PACKET_LOGIN_RESPOND) {
+        result = false;
+        goto clear;
     }
 
-    result = false;
-    switch (*(int*)(request->buffer + PACKET_TYPE_OFFSET)) {
+    int *res;
+    if ((res = readPacketInt(&in, &readPos)) == NULL) {
+        result = false;
+        goto clear;
+    }
+    switch (*res) {
     case PACKET_LOGIN_SUCCESS:
         DBG_INFO("Login success\n");
         result = true;
@@ -79,9 +82,14 @@ bool signIn(const SOCKET socket)
         DBG_ERROR("Server error\n");
         break;
     default:
-        DBG_ERROR("Unknown respond (%d)\n", *(int*)(request->buffer + PACKET_TYPE_OFFSET));
+        DBG_ERROR("Unknown respond (%d)\n", *(int*)(request->data + PACKET_TYPE_OFFSET));
     }
 
+    clear:
+    if (in.data != NULL)
+        deletePacket(in);
+    if (out.data != NULL)
+        deletePacket(out);
     deleteRequest(request);
     return result;
 }
@@ -135,7 +143,7 @@ void sendMessage(SOCKET socket)
     WaitForSingleObject(socketServerMutex, INFINITE);
     send(socket, (char*)&packetLen, sizeof(packetLen), 0);
     send(socket, (char*)&packetType, sizeof(packetType), 0);
-    send(socket, (char*)&request->requestId, sizeof(request->requestId), 0);
+    send(socket, (char*)&request->id, sizeof(request->id), 0);
     send(socket, (char*)&nicknameLen, sizeof(nicknameLen), 0);
     send(socket, nickname, nicknameLen, 0);
     send(socket, (char*)&messageLen, sizeof(messageLen), 0);
@@ -145,18 +153,18 @@ void sendMessage(SOCKET socket)
     WaitForSingleObject(request->event, INFINITE);
     WaitForSingleObject(request->mutex, INFINITE);
 
-    if (request->bufferSize < PACKET_HEADER_SIZE && try++ < MAX_RETRIES) {
+    if (request->size < PACKET_HEADER_SIZE && try++ < MAX_RETRIES) {
         DBG_WARNING("Respond too short, trying again (%d)\n", try);
         deleteRequest(request);
         goto tryAgain;
     }
-    if (request->bufferSize < PACKET_HEADER_SIZE) {
+    if (request->size < PACKET_HEADER_SIZE) {
         DBG_ERROR("Respond too short\n");
         deleteRequest(request);
         return;
     }
 
-    switch (*(int*)(request->buffer + PACKET_TYPE_OFFSET)) {
+    switch (*(int*)(request->data + PACKET_TYPE_OFFSET)) {
     case PACKET_MESSAGE_SUCCESS:
         DBG_INFO("Message sent\n");
         break;
@@ -203,7 +211,7 @@ void createChat(SOCKET socket)
     WaitForSingleObject(socketServerMutex, INFINITE);
     send(socket, (char*)&packetLen, sizeof(packetLen), 0);
     send(socket, (char*)&packetType, sizeof(packetType), 0);
-    send(socket, (char*)&request->requestId, sizeof(request->requestId), 0);
+    send(socket, (char*)&request->id, sizeof(request->id), 0);
     send(socket, (char*)&nicknameLen, sizeof(nicknameLen), 0);
     send(socket, nickname, nicknameLen, 0);
     ReleaseMutex(socketServerMutex);
@@ -211,17 +219,17 @@ void createChat(SOCKET socket)
     WaitForSingleObject(request->event, INFINITE);
     WaitForSingleObject(request->mutex, INFINITE);
 
-    if (request->bufferSize < PACKET_HEADER_SIZE && try++ < MAX_RETRIES) {
+    if (request->size < PACKET_HEADER_SIZE && try++ < MAX_RETRIES) {
         DBG_WARNING("Respond too short, trying again (%d)\n", try);
         deleteRequest(request);
         goto tryAgain;
     }
-    if (request->bufferSize < PACKET_HEADER_SIZE) {
+    if (request->size < PACKET_HEADER_SIZE) {
         DBG_ERROR("Respond too short\n");
         deleteRequest(request);
         return;
     }
-    switch (*(int*)(request->buffer + PACKET_TYPE_OFFSET)) {
+    switch (*(int*)(request->data + PACKET_TYPE_OFFSET)) {
     case PACKET_MESSAGE_SUCCESS:
         DBG_INFO("Message sent\n");
         break;

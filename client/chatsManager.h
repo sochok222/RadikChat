@@ -31,7 +31,7 @@ void showPrivateChats(void);
 void createChat(SOCKET socket);
 void sendMessage(SOCKET socket);
 void deleteChat(const Contact *contact);
-bool signIn(const SOCKET socket);
+bool logIn(const SOCKET socket);
 void updateUnreadMessages(void);
 void initChatHistory(void);
 

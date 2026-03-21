@@ -58,13 +58,13 @@ int main(void)
 	    }
 	    // Process packets
 	    client = clients;
-	    while (client != NULL) {
+	    while (client != NULL) { // TODO add maximum time to store packet that can't process
 	        if (client->receivedBytes < PACKET_HEADER_SIZE || *(int*)(client->buffer + PACKET_SIZE_OFFSET) > client->receivedBytes) {
 	            client = client->next;
 	            continue;
 	        }
 	        packetType = *(int*)(client->buffer + PACKET_TYPE_OFFSET);
-	        if (packetType == PACKET_LOGIN) {
+	        if (packetType == PACKET_LOGIN_REQUEST) {
 	            processLoginPacket(client);
 	        } else if (packetType == PACKET_CREATE_CHAT) {
 	            processCreateChatPacket(client);

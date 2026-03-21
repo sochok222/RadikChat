@@ -3,19 +3,21 @@
 
 #include <ws2tcpip.h>
 #include <winsock.h>
+#include <stdint.h>
 
 #define MAX_PENDING_REQUESTS 100
-#define MAX_PENDING_REQUESTS_BUFFER_SIZE 1024
+
 
 typedef struct sPendingRequest
 {
-    int requestId;
+    int id;
 
     HANDLE mutex;
     HANDLE event;
 
-    int bufferSize;
-    char *buffer;
+    size_t  size;
+    size_t  capacity;
+    uint8_t *data;
 } PendingRequest;
 
 void    initClientUtils();
