@@ -66,7 +66,7 @@ int main(void)
 	        packetType = *(int*)(client->buffer + PACKET_TYPE_OFFSET);
 	        if (packetType == PACKET_LOGIN_REQUEST) {
 	            processLoginPacket(client);
-	        } else if (packetType == PACKET_CREATE_CHAT) {
+	        } else if (packetType == PACKET_CREATE_CHAT_REQUEST) {
 	            processCreateChatPacket(client);
 	        } else if (packetType == PACKET_MESSAGE) {
 	            processMessagePacket(client);

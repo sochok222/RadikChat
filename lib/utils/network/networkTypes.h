@@ -15,13 +15,16 @@
 
 typedef enum ePacketType
 {
-    PACKET_CREATE_CHAT,
+    PACKET_CREATE_CHAT_REQUEST,
+    PACKET_CREATE_CHAT_RESPOND,
     PACKET_CREATE_CHAT_FAILURE,
     PACKET_CREATE_CHAT_SUCCESS,
     PACKET_CREATE_CHAT_CLIENT_NOT_FOUND,
     PACKET_CREATE_CHAT_ITS_YOUR_NICK,
 
-    PACKET_MESSAGE,
+    PACKET_MESSAGE_REQUEST,
+    PACKET_MESSAGE_RESPOND,
+    PACKET_MESSAGE_NOTIFICATION,
     PACKET_MESSAGE_FAILURE,
     PACKET_MESSAGE_CLIENT_NOT_FOUND,
     PACKET_MESSAGE_SUCCESS,
@@ -36,6 +39,13 @@ typedef enum ePacketType
     PACKET_ERROR_CANT_PROCESS,
     PACKET_ITERNAL_SERVER_ERROR,
 } PacketType;
+
+typedef enum ePacketCommand
+{
+    COMMAND_CREATE_CHAT,
+    COMMAND_MESSAGE,
+
+} PacketCommand;
 
 typedef struct sPacket
 {
@@ -62,9 +72,9 @@ void    sendPacket(SOCKET socket, Packet packet, HANDLE *socketMutex);
 int     *readPacketInt(Packet *p, size_t *pos);
 char    *readPacketString(Packet *p, size_t *pos);
 
-void appendToPacket(Packet *p, void *buff, size_t len);
-void addPacketInt(Packet *p, int val);
-void addPacketString(Packet *p, char *string);
+void appendToPacket(Packet *p, const void *buff, size_t len);
+void addPacketInt(Packet *p, const int val);
+void addPacketString(Packet *p, const char *string);
 
 /* PACKET structure
  * 0-3bytes     - packetSize

@@ -53,7 +53,9 @@ Packet packetFromBytes(char *request)
 
 void deletePacket(Packet packet)
 {
-    free(packet.data);
+    if (packet.data != NULL)
+        free(packet.data);
+    packet.data = NULL;
 }
 
 void sendPacket(SOCKET socket, Packet packet, HANDLE *socketMutex)
@@ -71,9 +73,9 @@ void sendPacket(SOCKET socket, Packet packet, HANDLE *socketMutex)
         ReleaseMutex(*socketMutex);
 }
 
-void appendToPacket(Packet *p, void *buff, size_t len)
+void appendToPacket(Packet *p, const void *buff, size_t len)
 {
-    char *buffer = (char*)buff;
+    const char *buffer = (char*)buff;
     if (p->size + len > p->capacity) {
         p->data = realloc(p->data, p->size + len);
         p->capacity = p->size + len;
@@ -82,7 +84,7 @@ void appendToPacket(Packet *p, void *buff, size_t len)
     p->size += len;
 }
 
-void addPacketInt(Packet *p, int val)
+void addPacketInt(Packet *p, const int val)
 {
     int type = FIELD_TYPE_INT;
     size_t size = sizeof(int);
@@ -92,7 +94,7 @@ void addPacketInt(Packet *p, int val)
     appendToPacket(p, &val, sizeof(val));
 }
 
-void addPacketString(Packet *p, char *string)
+void addPacketString(Packet *p, const char *string)
 {
     int type = FIELD_TYPE_STRING;
     size_t size = strlen(string) + 1;

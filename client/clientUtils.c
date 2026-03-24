@@ -60,7 +60,6 @@ void socketThread(void*)
         if (*(int*)(readBuffer + PACKET_SIZE_OFFSET) > received)
             continue;
 
-        DBG_INFO("packet id offset %d\n", *(int*)(readBuffer + PACKET_ID_OFFSET));
         if ((request = pendingRequests[*(int*)(readBuffer + PACKET_ID_OFFSET)]) == NULL) {
             DBG_FATAL("pendingRequests[] is NULL");
             break;

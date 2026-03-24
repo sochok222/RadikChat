@@ -8,6 +8,8 @@ set(${PROJECT_NAME}_src
         clientUtils.h
         chatsManager.c
         chatsManager.h
+        contactsManager.c
+        contactsManager.h
 )
 
 add_executable(${PROJECT_NAME} ${${PROJECT_NAME}_src})

@@ -6,6 +6,8 @@ set(${PROJECT_NAME}_src
 		server.c
 		serverUtils.h
 		serverUtils.c
+        packetProcessor.c
+        packetProcessor.h
 )
 
 add_executable(${PROJECT_NAME} ${${PROJECT_NAME}_src})

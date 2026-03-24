@@ -27,7 +27,6 @@ int main(void)
     HANDLE  socketThreadMutex;
 
     initDebug();
-    initChatHistory();
     system("cls");
     socketThreadRunMutex = CreateMutex(NULL, TRUE, NULL);
 
@@ -55,7 +54,7 @@ int main(void)
     while (1) {
         system("cls");
         printf("You have %d unread messages\n", unread);
-        printf("Enter command: 1-private chats; 2-create chat; 0 - quit: ");
+        printf("Enter command: 1-list chats; 2-create chat; 0 - quit: ");
         fseek(stdin,0,SEEK_END);
         scanf("%d", &choice);
 
@@ -69,7 +68,7 @@ int main(void)
             createChat(socketServer);
             break;
         case 3:
-            updateUnreadMessages();
+            unread = updateUnreadMessages();
             break;
         default:
         }
