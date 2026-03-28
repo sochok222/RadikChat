@@ -1,14 +1,14 @@
 #include "serverUtils.h"
+#include "../lib/utils/network/packetManager/packet.h"
 #include "debug.h"
-#include "networkTypes.h"
 
 #include <ws2tcpip.h>
 
 #define MAX_CLIENT_ADDRESS_SIZE 30
+#define MAX_PENDING_DELIVERIES 100
 
 ClientInfo *clients = NULL;
 static fd_set fdMaster;
-
 
 void initServerUtils()
 {

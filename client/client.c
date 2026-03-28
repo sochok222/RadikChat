@@ -47,7 +47,7 @@ int main(void)
         WSACleanup();
         return 1;
     }
-    _sleep(1500);
+    Sleep(1500);
 
     socketServerMutex = CreateMutex(NULL, FALSE, NULL);
 

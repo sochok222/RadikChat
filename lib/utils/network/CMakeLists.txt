@@ -4,8 +4,15 @@ project(Network LANGUAGES C)
 set(${PROJECT_NAME}_src
 		socketUtils.c
 		socketUtils.h
-		networkTypes.h
-		networkTypes.c
+
+        packetManager/packet.h
+        packetManager/packet.c
+
+		pendingOperation/request.c
+		pendingOperation/request.h
+
+		pendingOperation/delivery.c
+		pendingOperation/delivery.h
 )
 
 add_library(${PROJECT_NAME} STATIC ${${PROJECT_NAME}_src})

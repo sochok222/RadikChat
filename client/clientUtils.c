@@ -1,19 +1,21 @@
 #include "clientUtils.h"
+
+#include "packetManager/packet.h"
+#include "pendingOperation/request.h"
+
 #include <debug.h>
-#include <networkTypes.h>
 #include <process.h>
 #include <ws2tcpip.h>
 
 #define MAX_READ_BUFFER_SIZE 1024
-#define PENDING_REQUEST_BUFFER_SIZE 100
-#define MAX_PENDING_REQUESTS_BUFFER_SIZE 1024
 
 static fd_set fdMaster;
 
-PendingRequest  *pendingRequests[MAX_PENDING_REQUESTS] = { 0 };
-HANDLE          socketServerMutex;
+HANDLE socketServerMutex;
+HANDLE notificationsMutex;
+HANDLE notificationThreadRunMutex;
 
-void writeToRequest(PendingRequest *request, uint8_t *data, size_t size);
+static void handleNewMessage(Packet p);
 
 void initClientUtils()
 {
@@ -60,10 +62,15 @@ void socketThread(void*)
         if (*(int*)(readBuffer + PACKET_SIZE_OFFSET) > received)
             continue;
 
+        if (*(int*)(readBuffer + PACKET_TYPE_OFFSET) == TYPE_DELIVERY) {
+
+        }
+
         if ((request = pendingRequests[*(int*)(readBuffer + PACKET_ID_OFFSET)]) == NULL) {
-            DBG_FATAL("pendingRequests[] is NULL");
-            break;
-            // TODO handle this
+            DBG_ERROR("pendingRequests[id] is NULL");
+            Sleep(1000);
+            received -= *(int*)(readBuffer + PACKET_SIZE_OFFSET);
+            continue;
         }
 
         WaitForSingleObject(request->mutex, INFINITE);
@@ -71,6 +78,7 @@ void socketThread(void*)
         writeToRequest(request, readBuffer, received);
 
         // clearing buffer
+        // TODO handle too large PACKET_SIZE
         received -= *(int*)(readBuffer + PACKET_SIZE_OFFSET);
         memcpy(readBuffer, readBuffer + *(int*)(readBuffer + PACKET_SIZE_OFFSET), *(int*)(readBuffer + PACKET_SIZE_OFFSET));
         SetEvent(request->event);
@@ -79,48 +87,59 @@ void socketThread(void*)
     _endthread();
 }
 
-PendingRequest *createRequest(void)
+void notifictionThread(void*)
 {
-    PendingRequest *request = NULL;
+    DBG_FUNC();
+    Packet *notification;
+    for (int i = 0; i < MAX_NOTIFICATIONS; i++) {
+        WaitForSingleObject(notificationsMutex, INFINITE);
+        if ((notification = notifications[i]) != NULL) {
+            switch (notification->command) {
+            case COMMAND_MESSAGE:
+                handleNewMessage(*notification);
+                break;
+            default:
+                break;
+            }
 
-    for (int i = 0; i < MAX_PENDING_REQUESTS; i++) {
-        if (pendingRequests[i] == NULL) {
-            pendingRequests[i] = malloc(sizeof(*request));
-            request = pendingRequests[i];
-            if (request == NULL) {
-                DBG_FATAL("malloc failed");
-                break;
-            }
-            request->data = malloc(PENDING_REQUEST_BUFFER_SIZE);
-            if (request->data == NULL) {
-                DBG_FATAL("malloc failed");
-                free(request);
-                break;
-            }
-            request->id = i;
-            request->size = 0;
-            request->capacity = PENDING_REQUEST_BUFFER_SIZE;
-            request->event = CreateEvent(NULL, FALSE, FALSE, NULL);
-            request->mutex = CreateMutex(NULL, FALSE, NULL);
-            break;
+            free(notification);
+            notifications[i] = NULL;
         }
+        ReleaseMutex(notificationsMutex);
     }
-
-    return request;
 }
 
-void writeToRequest(PendingRequest *request, uint8_t *data, size_t size)
+static void handleNewMessage(Packet packet)
 {
-    if (request->capacity < request->size + size) {
-        request->data = realloc(request->data, request->size + size);
-    }
-    memcpy(request->data + request->size, data, size);
+
 }
 
-void deleteRequest(PendingRequest *request)
+
+void printStatusErrorMessage(PacketStatus packetStatus)
 {
-    pendingRequests[request->id] = NULL;
-    free(request->data);
-    free(request);
-    request = NULL;
+    switch (packetStatus) {
+    case STATUS_FAILURE:
+        DBG_ERROR("Status failed\n");
+        break;
+    case STATUS_CANT_READ:
+        DBG_WARNING("Server can't read data from the packet\n");
+        break;
+    case STATUS_NOT_FOUND:
+        DBG_WARNING("Packet not found\n");
+        break;
+    case STATUS_ALREADY_EXISTS:
+        DBG_WARNING("Status already exists\n");
+        break;
+    case STATUS_SERVER_ERROR:
+        DBG_WARNING("Server error\n");
+        break;
+    case STATUS_SIZE_TOO_BIG:
+        DBG_WARNING("Packet size too big\n");
+        break;
+    case STATUS_ACTION_TO_HIMSELF:
+        DBG_WARNING("Action to himself\n");
+        break;
+    default:
+        DBG_ERROR("Unknown respond (%d)\n", packetStatus);
+    }
 }

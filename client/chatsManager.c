@@ -1,11 +1,11 @@
 #include "chatsManager.h"
 
 #include <debug.h>
-#include <networkTypes.h>
+#include <pendingOperation/request.h>
 #include <stdio.h>
 #include <synchapi.h>
-#include <ws2tcpip.h>
 #include <windows.h>
+#include <ws2tcpip.h>
 
 #include "clientUtils.h"
 #include "contactsManager.h"
@@ -19,12 +19,10 @@ bool logIn(const SOCKET socket)
 {
     DBG_FUNC();
     char    nickname[NICKNAME_LEN+1];
-    int     *res;
-    size_t  readPos = 0;
     bool    result = false;
     Packet  out, in;
 
-    PendingRequest * request;
+    PendingRequest *request;
 
     printf("Enter nickname or q to quit: ");
     readInput(stdin, nickname, NICKNAME_LEN);
@@ -37,7 +35,7 @@ bool logIn(const SOCKET socket)
         return false;
     }
 
-    out = createPacket(PACKET_LOGIN_REQUEST, request->id);
+    out = createPacket(TYPE_REQUEST, COMMAND_LOGIN, 0, request->id);
     addPacketString(&out, nickname);
     sendPacket(socket, out, socketServerMutex);
 
@@ -45,38 +43,16 @@ bool logIn(const SOCKET socket)
     WaitForSingleObject(request->mutex, INFINITE);
 
     in = packetFromBytes((char*)request->data);
-    if (in.data == NULL) {
-        result = false;
-        goto clear;
-    }
-    if (in.type != PACKET_LOGIN_RESPOND) {
-        result = false;
-        goto clear;
-    }
 
-    if ((res = readPacketInt(&in, &readPos)) == NULL) {
-        result = false;
-        goto clear;
-    }
-    switch (*res) {
-    case PACKET_LOGIN_SUCCESS:
+    switch (in.status) {
+    case STATUS_OK:
         DBG_INFO("Login success\n");
         result = true;
         break;
-    case PACKET_LOGIN_FAILURE:
-        DBG_ERROR("Login failed\n");
-        break;
-    case PACKET_LOGIN_ALREADY_EXISTS:
-        DBG_INFO("User with this username already exists\n");
-        break;
-    case PACKET_ERROR_CANT_PROCESS: case PACKET_ITERNAL_SERVER_ERROR:
-        DBG_ERROR("Server error\n");
-        break;
     default:
-        DBG_ERROR("Unknown respond (%d)\n", *(int*)(request->data + PACKET_TYPE_OFFSET));
+        printStatusErrorMessage(in.status);
     }
 
-    clear:
     if (in.data != NULL)
         deletePacket(in);
     if (out.data != NULL)
@@ -120,7 +96,7 @@ void showPrivateChats(void)
     }
 }
 
-void openChat(Contact *contact)
+void openChat(const Contact *contact)
 {
     DBG_FUNC();
 
@@ -140,8 +116,7 @@ void sendMessage(const SOCKET socket, const Contact *contact, const char *messag
 {
     DBG_FUNC();
     PendingRequest  *request = NULL;
-    int             try = 0, *respond = NULL;
-    size_t          readPos = 0;
+    int             try, respond;
     Packet          pIn, pOut;
 
     if (contact == NULL) {
@@ -151,7 +126,7 @@ void sendMessage(const SOCKET socket, const Contact *contact, const char *messag
 
     pIn.data = NULL; pOut.data = NULL;
 
-    for (int i = 0; i < 3; i++) {
+    for (try = 0; try < 3; try++) {
         deleteRequest(request);
         deletePacket(pIn); deletePacket(pOut);
         request = createRequest();
@@ -160,7 +135,7 @@ void sendMessage(const SOCKET socket, const Contact *contact, const char *messag
             return;
         }
 
-        pOut = createPacket(PACKET_MESSAGE_REQUEST, request->id);
+        pOut = createPacket(TYPE_REQUEST, COMMAND_MESSAGE, 0, request->id);
         addPacketString(&pOut, contact->nickname);
         addPacketString(&pOut, message);
         sendPacket(socket, pOut, &socketServerMutex);
@@ -174,40 +149,26 @@ void sendMessage(const SOCKET socket, const Contact *contact, const char *messag
             DBG_ERROR("Can't create packet from respond\n");
             continue;
         }
-
-        if ((respond = readPacketInt(&pIn, &readPos)) != NULL) {
-            break;
-        }
+        break;
     }
+    respond = pIn.status; // FIXME handle if loop terminated without proper respond
 
-    if (respond != NULL)
-    switch (*respond) {
-    case PACKET_MESSAGE_SUCCESS:
+    switch (respond) {
+    case STATUS_OK:
         DBG_INFO("Message sent\n");
         break;
-    case PACKET_MESSAGE_FAILURE:
-        DBG_ERROR("Message sending failed\n");
-        break;
-    case PACKET_MESSAGE_CLIENT_NOT_FOUND:
-        DBG_INFO("Client not found\n");
-        break;
-    case PACKET_ITERNAL_SERVER_ERROR:
-        DBG_WARNING("Internal Server Error\n");
-        break;
     default:
-        DBG_WARNING("Unknown respond\n");
+        printStatusErrorMessage(respond);
     }
     deleteRequest(request);
     deletePacket(pIn); deletePacket(pOut);
-    _sleep(1500);
+    Sleep(1500);
 }
 
 void createChat(SOCKET socket)
 {
     DBG_FUNC();
     PendingRequest  *request;
-    int             *respond;
-    size_t          readPos = 0;
     char            nickname[NICKNAME_LEN+1];
     Packet          in, out;
 
@@ -222,7 +183,7 @@ void createChat(SOCKET socket)
         DBG_FATAL("Failed to create request\n");
         return;
     }
-    out = createPacket(PACKET_CREATE_CHAT_REQUEST, request->id);
+    out = createPacket(TYPE_REQUEST, COMMAND_CREATE_CHAT, 0, request->id);
     addPacketString(&out, nickname);
     sendPacket(socket, out, &socketServerMutex);
 
@@ -230,48 +191,18 @@ void createChat(SOCKET socket)
     WaitForSingleObject(request->mutex, INFINITE);
 
     in = packetFromBytes(request->data);
-    if (request->data == NULL) {
-        DBG_ERROR("Can't create packet from request\n");
-        deleteRequest(request);
-        deletePacket(out);
-        return;
-    }
-    if ((respond = readPacketInt(&in, &readPos)) == NULL) {
-        DBG_DEBUG("Can't read respond from packet\n");
-        deleteRequest(request);
-        deletePacket(out);
-        deletePacket(in);
-        return;
-    }
 
-    bool success = false;
-    switch (*respond) {
-    case PACKET_CREATE_CHAT_SUCCESS:
+    switch (in.status) {
+    case STATUS_OK:
         DBG_INFO("Chat created\n");
-        success = true;
-        break;
-    case PACKET_CREATE_CHAT_FAILURE:
-        DBG_ERROR("Failed\n");
-        break;
-    case PACKET_CREATE_CHAT_CLIENT_NOT_FOUND:
-        DBG_INFO("Client not found\n");
-        break;
-    case PACKET_ITERNAL_SERVER_ERROR:
-        DBG_ERROR("Internal Server Error\n");
-        break;
-    case PACKET_CREATE_CHAT_ITS_YOUR_NICK:
-        DBG_INFO("Thats your nickname\n");
+        createContact(nickname);
         break;
     default:
-        DBG_WARNING("Unknown respond\n");
-    }
-
-    if (success == true) {
-        createContact(nickname);
+        printStatusErrorMessage(in.status);
     }
 
     deleteRequest(request);
-    _sleep(1500);
+    Sleep(1500);
 }
 
 void deleteChat(const Contact *contact)

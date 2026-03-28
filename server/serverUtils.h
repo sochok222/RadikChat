@@ -1,7 +1,7 @@
 #ifndef RADIKCHAT_SERVERUTILS_H
 #define RADIKCHAT_SERVERUTILS_H
 
-#include <winsock.h>
+#include <stdint.h>
 #include <ws2tcpip.h>
 
 #define CLIENT_MAX_BUFFER_SIZE 1024
@@ -12,8 +12,8 @@ typedef struct sClientInfo
     socklen_t   addressSize;
     struct      sockaddr_storage address;
     SOCKET      socket;
-    char        buffer[CLIENT_MAX_BUFFER_SIZE];
-    int         receivedBytes;
+    uint8_t     buffer[CLIENT_MAX_BUFFER_SIZE];
+    size_t      receivedBytes;
     char        nickname[CLIENT_MAX_NICKNAME_SIZE + 1];
     bool        isLogined;
 

@@ -1,4 +1,4 @@
-#include "networkTypes.h"
+#include "packet.h"
 
 #include "debug.h"
 
@@ -10,43 +10,60 @@
 #define PACKET_BASE_CAPACITY 50
 #define PACKET_MAX_CAPACITY 500
 #define PACKET_FIELD_MAX_STRING_LEN 150
-#define PACKET_CONTENT_OFFSET (sizeof(((Packet*)(0))->size) + sizeof(((Packet*)(0))->type) + sizeof(((Packet*)(0))->id))
+#define PACKET_CONTENT_OFFSET PACKET_HEADER_SIZE
 
 #define PACKET_FIELD_HEADER_SIZE (sizeof(int) + sizeof(size_t))
 #define PACKET_FIELD_TYPE_OFFSET (0)
 #define PACKET_FIELD_SIZE_OFFSET (sizeof(int))
 #define PACKET_FIELD_CONTENT_OFFSET (sizeof(int) + sizeof(size_t))
 
-Packet createPacket(PacketType type, int id)
+Packet createPacket(PacketType type, PacketCommand command, PacketStatus status, int id)
 {
     Packet p;
 
-    p.type = type;
-    p.capacity = PACKET_BASE_CAPACITY;
-    p.size = 0;
-    p.data = malloc(PACKET_BASE_CAPACITY);
     p.id = id;
+
+    p.type      = type;
+    p.command   = command;
+    p.status    = status;
+
+    p.capacity  = PACKET_BASE_CAPACITY;
+    p.size      = 0;
+    p.data      = malloc(PACKET_BASE_CAPACITY);
 
     return p;
 }
 
-Packet packetFromBytes(char *request)
+Packet packetFromBytes(uint8_t *data)
 {
     Packet p;
 
-    p.type = *(int*)(request + PACKET_TYPE_OFFSET);
+    p.id = *(int*)(data + PACKET_ID_OFFSET);
+
+    p.type = *(int*)(data + PACKET_TYPE_OFFSET);
+    p.command = *(int*)(data + PACKET_COMMAND_OFFSET);
+    p.status = *(int*)(data + PACKET_STATUS_OFFSET);
+
     p.capacity = 0;
-    p.size = *(size_t*)(request + PACKET_SIZE_OFFSET);
-    p.id = *(int*)(request + PACKET_ID_OFFSET);
+    p.size = *(size_t*)(data + PACKET_SIZE_OFFSET);
     p.data = NULL;
 
-    if (p.size <= PACKET_MAX_CAPACITY) {
-        p.data = malloc(p.size);
+    p.parseError = PARSE_ERROR_NONE;
+
+    if (p.size - PACKET_HEADER_SIZE <= PACKET_MAX_CAPACITY) {
+        if (p.size - PACKET_HEADER_SIZE > 0)
+            p.data = malloc(p.size);
+        else {
+            p.parseError = PARSE_ERROR_TOO_SMALL;
+            return p;
+        }
         if (p.data == NULL) {
             DBG_ERROR("Cant allocate memory for packet data\n");
+            p.parseError = PARSE_ERROR_MALLOC_FAILED;
         } else
-            memcpy(p.data, request + PACKET_HEADER_SIZE, p.size - PACKET_HEADER_SIZE);
-    }
+            memcpy(p.data, data + PACKET_HEADER_SIZE, p.size - PACKET_HEADER_SIZE);
+    } else
+        p.parseError = PARSE_ERROR_TOO_BIG;
 
     return p;
 }
@@ -63,9 +80,12 @@ void sendPacket(SOCKET socket, Packet packet, HANDLE *socketMutex)
     if (socketMutex != NULL)
         WaitForSingleObject(*socketMutex, INFINITE);
 
+    // FIXME somehow client sends redundant bytes
     packet.size = PACKET_HEADER_SIZE + packet.size;
     send(socket, (char*)&packet.size, sizeof(packet.size), 0);
     send(socket, (char*)&packet.type, sizeof(packet.type), 0);
+    send(socket, (char*)&packet.command, sizeof(packet.command), 0);
+    send(socket, (char*)&packet.status, sizeof(packet.status), 0);
     send(socket, (char*)&packet.id, sizeof(packet.id), 0);
     send(socket, (char*)packet.data, packet.size - PACKET_HEADER_SIZE, 0);
 

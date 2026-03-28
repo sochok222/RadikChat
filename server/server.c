@@ -1,7 +1,7 @@
 #include "serverUtils.h"
-
+#include <packetManager/packet.h>
+#include "packetProcessor.h"
 #include <debug.h>
-#include <networkTypes.h>
 #include <socketUtils.h>
 #include <stdio.h>
 #include <winsock2.h>
@@ -18,13 +18,14 @@ int main(void)
 {
 	SOCKET      socketListen;
 	fd_set      fdReads;
-	int         bytesReceived, packetType;
+	int         bytesReceived, packetCommand;
 
     serverInit();
 
     socketListen = createPassiveSocket(PORT, SOCK_STREAM, AF_INET, BACKLOG);
 
     DBG_INFO("Waiting for connections...\n");
+    DBG_INFO("Type offset: %d\n", PACKET_TYPE_OFFSET);
 	while (1) {
 	    fdReads = waitForClients(socketListen);
 	    if (FD_ISSET(socketListen, &fdReads)) {
@@ -59,16 +60,16 @@ int main(void)
 	    // Process packets
 	    client = clients;
 	    while (client != NULL) { // TODO add maximum time to store packet that can't process
-	        if (client->receivedBytes < PACKET_HEADER_SIZE || *(int*)(client->buffer + PACKET_SIZE_OFFSET) > client->receivedBytes) {
+	        if (client->receivedBytes < PACKET_HEADER_SIZE || *(size_t*)(client->buffer + PACKET_SIZE_OFFSET) > client->receivedBytes) {
 	            client = client->next;
 	            continue;
 	        }
-	        packetType = *(int*)(client->buffer + PACKET_TYPE_OFFSET);
-	        if (packetType == PACKET_LOGIN_REQUEST) {
+	        packetCommand = *(int*)(client->buffer + PACKET_COMMAND_OFFSET);
+	        if (packetCommand == COMMAND_LOGIN) {
 	            processLoginPacket(client);
-	        } else if (packetType == PACKET_CREATE_CHAT_REQUEST) {
+	        } else if (packetCommand == COMMAND_CREATE_CHAT) {
 	            processCreateChatPacket(client);
-	        } else if (packetType == PACKET_MESSAGE) {
+	        } else if (packetCommand == COMMAND_MESSAGE) {
 	            processMessagePacket(client);
 	        }
 	        // clear packet
