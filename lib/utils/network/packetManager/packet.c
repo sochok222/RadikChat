@@ -77,17 +77,25 @@ void deletePacket(Packet packet)
 
 void sendPacket(SOCKET socket, Packet packet, HANDLE *socketMutex)
 {
+    int toSend = 0;
     if (socketMutex != NULL)
         WaitForSingleObject(*socketMutex, INFINITE);
 
-    // FIXME somehow client sends redundant bytes
-    packet.size = PACKET_HEADER_SIZE + packet.size;
+    packet.size += PACKET_HEADER_SIZE;
     send(socket, (char*)&packet.size, sizeof(packet.size), 0);
     send(socket, (char*)&packet.type, sizeof(packet.type), 0);
     send(socket, (char*)&packet.command, sizeof(packet.command), 0);
     send(socket, (char*)&packet.status, sizeof(packet.status), 0);
     send(socket, (char*)&packet.id, sizeof(packet.id), 0);
-    send(socket, (char*)packet.data, packet.size - PACKET_HEADER_SIZE, 0);
+    packet.size -= PACKET_HEADER_SIZE;
+    while (packet.size) {
+        toSend = packet.size > INT_MAX ? INT_MAX : (int)packet.size;
+        if (toSend == INT_MAX)
+            packet.size -= INT_MAX;
+        else
+            packet.size -= toSend;
+        send(socket, (char*)packet.data, toSend, 0);
+    }
 
     if (socketMutex != NULL)
         ReleaseMutex(*socketMutex);
