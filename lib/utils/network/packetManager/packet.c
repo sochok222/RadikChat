@@ -31,6 +31,8 @@ Packet createPacket(PacketType type, PacketCommand command, PacketStatus status,
     p.size      = 0;
     p.data      = malloc(PACKET_BASE_CAPACITY);
 
+    p.parseError = PARSE_ERROR_NONE;
+
     return p;
 }
 
@@ -54,7 +56,7 @@ Packet packetFromBytes(uint8_t *data)
         if (p.size - PACKET_HEADER_SIZE > 0)
             p.data = malloc(p.size);
         else {
-            p.parseError = PARSE_ERROR_TOO_SMALL;
+            p.parseError = PARSE_ERROR_WRONG_SIZE;
             return p;
         }
         if (p.data == NULL) {
@@ -63,7 +65,7 @@ Packet packetFromBytes(uint8_t *data)
         } else
             memcpy(p.data, data + PACKET_HEADER_SIZE, p.size - PACKET_HEADER_SIZE);
     } else
-        p.parseError = PARSE_ERROR_TOO_BIG;
+        p.parseError = PARSE_ERROR_WRONG_SIZE;
 
     return p;
 }
@@ -159,6 +161,7 @@ char *readPacketString(Packet *p, size_t *pos)
         DBG_ERROR("String field in not null-terminated\n")
         return NULL;
     }
+    *pos += PACKET_FIELD_HEADER_SIZE + typeSize;
 
     return result;
 }

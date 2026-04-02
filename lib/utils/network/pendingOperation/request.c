@@ -45,10 +45,13 @@ void writeToRequest(PendingRequest *request, uint8_t *data, size_t size)
     memcpy(request->data + request->size, data, size);
 }
 
-void deleteRequest(PendingRequest *request)
+void deleteRequest(PendingRequest **request)
 {
-    pendingRequests[request->id] = NULL;
-    free(request->data);
-    free(request);
-    request = NULL;
+    if (*request == NULL)
+        return;
+    pendingRequests[(*request)->id] = NULL;
+    if ((*request)->data != NULL)
+        free((*request)->data);
+    free(*request);
+    *request = NULL;
 }

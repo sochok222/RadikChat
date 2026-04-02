@@ -3,7 +3,7 @@
 
 #include "chatsManager.h"
 
-void createContact(const char *nickname);
+Contact *createContact(const char *nickname);
 void deleteContact(const char *nickname);
 void addMessage(Contact *contact, const char *message, bool sender);
 

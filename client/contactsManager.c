@@ -3,7 +3,7 @@
 
 static void initChatHistory(ChatHistory *chatHistory);
 
-void createContact(const char *nickname)
+Contact *createContact(const char *nickname)
 {
     Contact *contact;
 
@@ -15,6 +15,7 @@ void createContact(const char *nickname)
 
     contact->next = contacts;
     contacts = contact;
+    return contact;
 }
 
 void deleteContact(const char *nickname)

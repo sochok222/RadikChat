@@ -52,9 +52,8 @@ typedef enum eStatus
 typedef enum ePacketParseError
 {
     PARSE_ERROR_NONE,
-    PARSE_ERROR_TOO_BIG,
+    PARSE_ERROR_WRONG_SIZE,
     PARSE_ERROR_MALLOC_FAILED ,
-    PARSE_ERROR_TOO_SMALL,
 } PacketParseError;
 
 typedef struct sPacket

@@ -1,6 +1,9 @@
 #include "clientUtils.h"
 
+#include "chatsManager.h"
+#include "contactsManager.h"
 #include "packetManager/packet.h"
+#include "pendingOperation/delivery.h"
 #include "pendingOperation/request.h"
 
 #include <debug.h>
@@ -15,10 +18,13 @@ HANDLE socketServerMutex;
 HANDLE notificationsMutex;
 HANDLE notificationThreadRunMutex;
 
-static void handleNewMessage(Packet p);
+static Packet   handleNewMessage(Packet p);
+static void     addNotification(uint8_t *data);
+static void     deleteNotification(Packet **notification);
 
 void initClientUtils()
 {
+    notificationThreadRunMutex = CreateMutex(NULL, FALSE, NULL);
     FD_ZERO(&fdMaster);
 }
 
@@ -42,7 +48,7 @@ void socketThread(void*)
 {
     int     received = 0;
     uint8_t readBuffer[MAX_READ_BUFFER_SIZE];
-    PendingRequest *request;
+    PendingRequest *request = NULL;
 
     while (WaitForSingleObject(socketThreadRunMutex, 75L) == WAIT_TIMEOUT) {
         waitForSeverRespond(socketServer, 0);
@@ -63,7 +69,9 @@ void socketThread(void*)
             continue;
 
         if (*(int*)(readBuffer + PACKET_TYPE_OFFSET) == TYPE_DELIVERY) {
-
+            DBG_INFO("Received a delivery\n");
+            addNotification(readBuffer);
+            goto clear;
         }
 
         if ((request = pendingRequests[*(int*)(readBuffer + PACKET_ID_OFFSET)]) == NULL) {
@@ -79,6 +87,7 @@ void socketThread(void*)
 
         // clearing buffer
         // TODO handle too large PACKET_SIZE
+        clear:
         received -= *(int*)(readBuffer + PACKET_SIZE_OFFSET);
         memcpy(readBuffer, readBuffer + *(int*)(readBuffer + PACKET_SIZE_OFFSET), *(int*)(readBuffer + PACKET_SIZE_OFFSET));
         SetEvent(request->event);
@@ -87,33 +96,100 @@ void socketThread(void*)
     _endthread();
 }
 
-void notifictionThread(void*)
+static void addNotification(uint8_t *data)
 {
-    DBG_FUNC();
-    Packet *notification;
-    for (int i = 0; i < MAX_NOTIFICATIONS; i++) {
-        WaitForSingleObject(notificationsMutex, INFINITE);
-        if ((notification = notifications[i]) != NULL) {
-            switch (notification->command) {
-            case COMMAND_MESSAGE:
-                handleNewMessage(*notification);
-                break;
-            default:
-                break;
-            }
+    Packet *notification = malloc(sizeof(*notification));
+    *notification = packetFromBytes(data);
 
-            free(notification);
-            notifications[i] = NULL;
+    if (notification->data == NULL) {
+        DBG_ERROR("notification data is NULL\n");
+        if (notification->parseError == PARSE_ERROR_MALLOC_FAILED) {
+            DBG_ERROR("Failed to allocate memory for notification\n");
+        } else {
+            DBG_ERROR("notification data size is not correct (%ull)\n", notification->size);
+        }
+        return;
+    }
+
+    for (int i = 0; i < MAX_NOTIFICATIONS; i++) {
+        if (notifications[i] == NULL) {
+            notifications[i] = notification;
+            return;
+        }
+    }
+    DBG_ERROR("Notifications are full\n");
+    deleteNotification(&notification);
+}
+
+static void deleteNotification(Packet **notification)
+{
+    if (notification == NULL || *notification == NULL)
+        return;
+    if ((*notification)->data != NULL)
+        free((*notification)->data);
+    free(*notification);
+    *notification = NULL;
+}
+
+void notificationThread(void*)
+{
+    Packet *notification;
+    Packet respond;
+    while (true) {
+        WaitForSingleObject(notificationsMutex, INFINITE);
+        for (int i = 0; i < MAX_NOTIFICATIONS; i++) {
+            if ((notification = notifications[i]) != NULL) {
+                switch (notification->command) {
+                case COMMAND_MESSAGE:
+                    respond = handleNewMessage(*notification);
+                    sendPacket(socketServer, respond, &socketServerMutex);
+                    deletePacket(respond);
+                    break;
+                default:
+                    break;
+                }
+                deleteNotification(&notifications[i]);
+            }
         }
         ReleaseMutex(notificationsMutex);
+        Sleep(1000);
     }
+    _endthread();
 }
 
-static void handleNewMessage(Packet packet)
+static Packet handleNewMessage(Packet messagePacket)
 {
+    Packet respond = createPacket(TYPE_RESPOND, COMMAND_MESSAGE, STATUS_FAILURE, messagePacket.id);
+    char *senderNickname, *receivedMessage;
+    size_t readPos = 0;
+    Contact *contact = contacts;
 
+    if ((senderNickname = readPacketString(&messagePacket, &readPos)) == NULL) {
+        DBG_ERROR("Can't read nickname from the message\n");
+        respond.status = STATUS_CANT_READ;
+        return respond;
+    }
+
+    while (contact != NULL) {
+        if (strcmp(contact->nickname, senderNickname) != 0)
+            break;
+        contact = contact->next;
+    }
+    if (contact == NULL) {
+        contact = createContact(senderNickname);
+    }
+
+    if ((receivedMessage = readPacketString(&messagePacket, &readPos)) == NULL) {
+        DBG_ERROR("Can't read nickname from the message\n");
+        respond.status = STATUS_CANT_READ;
+        return respond;
+    }
+
+    addMessage(contact, receivedMessage, false);
+    respond.status = STATUS_OK;
+
+    return respond;
 }
-
 
 void printStatusErrorMessage(PacketStatus packetStatus)
 {

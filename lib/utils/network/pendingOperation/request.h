@@ -22,7 +22,7 @@ typedef struct sPendingRequest
 
 
 PendingRequest  *createRequest(void);
-void            deleteRequest(PendingRequest *request);
+void            deleteRequest(PendingRequest **request);
 void            writeToRequest(PendingRequest *request, uint8_t *data, size_t size);
 
 extern PendingRequest   *pendingRequests[MAX_PENDING_REQUESTS];

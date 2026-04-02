@@ -6,6 +6,7 @@
 #include <synchapi.h>
 #include <windows.h>
 #include <ws2tcpip.h>
+#include <conio.h>
 
 #include "clientUtils.h"
 #include "contactsManager.h"
@@ -42,7 +43,7 @@ bool logIn(const SOCKET socket)
     WaitForSingleObject(request->event, INFINITE);
     WaitForSingleObject(request->mutex, INFINITE);
 
-    in = packetFromBytes((char*)request->data);
+    in = packetFromBytes(request->data);
 
     switch (in.status) {
     case STATUS_OK:
@@ -57,7 +58,7 @@ bool logIn(const SOCKET socket)
         deletePacket(in);
     if (out.data != NULL)
         deletePacket(out);
-    deleteRequest(request);
+    deleteRequest(&request);
     return result;
 }
 
@@ -90,7 +91,7 @@ void showPrivateChats(void)
             continue;
         }
 
-        for (contact = contacts, i = 0; i < selected; i++)
+        for (contact = contacts, i = 0; i < (selected - 1); i++)
             contact = contact->next;
         openChat(contact);
     }
@@ -99,16 +100,40 @@ void showPrivateChats(void)
 void openChat(const Contact *contact)
 {
     DBG_FUNC();
+    char inputBuffer[100];
+    int inputPos = 0, ch;
+
+    system("cls");
+    printf("Chat with %s:\n", contact->nickname);
 
     Message *it = contact->chatHistory.head;
 
     while (it != NULL) {
         printf("%s: %s\n", it->sender == true ? "You" : contact->nickname, it->message);
+        it = it->next;
     }
+
 
     // Process input and send messages
     while (true) {
-
+        if (_kbhit()) {
+            switch (ch = getch()) {
+            case 8: /* backspace */
+                if (inputPos >= 0) {
+                    inputPos--;
+                    putch(' ');
+                    putch(ch);
+                }
+                break;
+            case 13: case 10: /* enter key */
+                inputBuffer[inputPos + 1] = 0x0;
+                sendMessage(socketServer, contact, inputBuffer);
+                break;
+            default:
+                inputBuffer[inputPos++] = ch;
+                putch(ch);
+            }
+        }
     }
 }
 
@@ -127,7 +152,7 @@ void sendMessage(const SOCKET socket, const Contact *contact, const char *messag
     pIn.data = NULL; pOut.data = NULL;
 
     for (try = 0; try < 3; try++) {
-        deleteRequest(request);
+        deleteRequest(&request);
         deletePacket(pIn); deletePacket(pOut);
         request = createRequest();
         if (request == NULL) {
@@ -144,7 +169,7 @@ void sendMessage(const SOCKET socket, const Contact *contact, const char *messag
         WaitForSingleObject(request->mutex, INFINITE);
 
         pIn = packetFromBytes((char*)request->data);
-        deleteRequest(request);
+        deleteRequest(&request);
         if (pIn.data == NULL) {
             DBG_ERROR("Can't create packet from respond\n");
             continue;
@@ -160,7 +185,7 @@ void sendMessage(const SOCKET socket, const Contact *contact, const char *messag
     default:
         printStatusErrorMessage(respond);
     }
-    deleteRequest(request);
+    deleteRequest(&request);
     deletePacket(pIn); deletePacket(pOut);
     Sleep(1500);
 }
@@ -201,7 +226,7 @@ void createChat(SOCKET socket)
         printStatusErrorMessage(in.status);
     }
 
-    deleteRequest(request);
+    deleteRequest(&request);
     Sleep(1500);
 }
 

@@ -152,10 +152,14 @@ void processMessagePacket(ClientInfo *client)
         it = it->next;
     }
 
-    if (sendMessage(client, it, message) == true)
+    if (sendMessage(client, it, message) == true) {
+        DBG_DEBUG("Message sended successfully\n");
         toSender.status = STATUS_OK;
-    else
+    }
+    else {
+        DBG_DEBUG("Failed to send message\n");
         toSender.status = STATUS_FAILURE;
+    }
 
     sendPacket(client->socket, toSender, NULL);
     deletePacket(in); deletePacket(toSender);
@@ -170,7 +174,7 @@ static bool sendMessage(ClientInfo *from, ClientInfo *to, const char *message)
     char        buffer[100];
     in.data = NULL; out.data = NULL;
     TIMEVAL timeout;
-    timeout.tv_sec = 1;
+    timeout.tv_sec = 3;
     timeout.tv_usec = 0;
 
     // Status and id are ignored
@@ -180,6 +184,7 @@ static bool sendMessage(ClientInfo *from, ClientInfo *to, const char *message)
     addPacketString(&out, message);
 
     sendPacket(to->socket, out, NULL);
+    deletePacket(out);
 
     for (cycle = 0; cycle < 3; cycle++) {
         FD_ZERO(&fdRespond);
@@ -209,7 +214,7 @@ static bool sendMessage(ClientInfo *from, ClientInfo *to, const char *message)
                 return *(int*)(buffer + PACKET_STATUS_OFFSET) == STATUS_OK;
             }
         } else {
-            return false;
+            continue;
         }
     }
 

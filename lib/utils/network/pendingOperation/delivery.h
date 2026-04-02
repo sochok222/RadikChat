@@ -5,11 +5,13 @@
 
 #define MAX_PENDING_DELIVERIES  MAX_PENDING_REQUESTS
 
-#define createDelivery(...) createRequest(__VA_ARGS__)
-#define deleteDelivery(...) deleteRequest(__VA_ARGS__)
-
 typedef PendingRequest PendingDelivery;
 
-extern PendingDelivery pendingDeliveries[MAX_PENDING_DELIVERIES];
+PendingRequest* (*createDelivery)(void) = createRequest;
+void            (*deleteDelivery)(PendingDelivery**) = deleteRequest;
+void            (*writeToDelivery)(PendingDelivery* delivery, uint8_t *data, size_t size) = writeToRequest;
+
+
+extern PendingDelivery *pendingDeliveries[MAX_PENDING_DELIVERIES];
 
 #endif //RADIKCHAT_DELIVERYMANAGER_H
