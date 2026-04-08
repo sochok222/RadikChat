@@ -127,7 +127,10 @@ void openChat(const Contact *contact)
                 break;
             case 13: case 10: /* enter key */
                 inputBuffer[inputPos + 1] = 0x0;
+                if (strcmp(inputBuffer, "/quit") == 0)
+                    return;
                 sendMessage(socketServer, contact, inputBuffer);
+                inputPos = 0;
                 break;
             default:
                 inputBuffer[inputPos++] = ch;
@@ -181,6 +184,7 @@ void sendMessage(const SOCKET socket, const Contact *contact, const char *messag
     switch (respond) {
     case STATUS_OK:
         DBG_INFO("Message sent\n");
+        addMessage(contact, message, true);
         break;
     default:
         printStatusErrorMessage(respond);
@@ -241,8 +245,10 @@ int updateUnreadMessages(void)
     int unread = 0;
     Contact *contact = contacts;
 
-    while (contact != NULL)
+    while (contact != NULL) {
         unread += contact->unread;
+        contact = contact->next;
+    }
 
     return unread;
 }

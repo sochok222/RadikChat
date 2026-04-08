@@ -96,7 +96,7 @@ static int serverInit()
 {
 	WSADATA wsadata;
 
-    initDebug();
+    initDebug(NULL);
     initServerUtils();
 
     DBG_INFO("Initializing winsock...\n");

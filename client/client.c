@@ -2,6 +2,7 @@
 
 #include "chatsManager.h"
 
+#define LOG_TO_FILE
 #include <debug.h>
 #include <socketUtils.h>
 #include <stdio.h>
@@ -26,7 +27,7 @@ int main(void)
     int     unread = 0, choice;
     HANDLE  socketThreadMutex;
 
-    initDebug();
+    initDebug("client_logs.log");
     system("cls");
     socketThreadRunMutex = CreateMutex(NULL, TRUE, NULL);
 

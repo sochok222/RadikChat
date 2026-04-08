@@ -14,10 +14,20 @@
 
 PRIVATE	HANDLE console_handler;
 PRIVATE CONSOLE_SCREEN_BUFFER_INFO console_info;
+PRIVATE FILE *fout = NULL;
 
-void initDebug()
+
+void initDebug(const char *logFile)
 {
-    console_handler = GetStdHandle(STD_OUTPUT_HANDLE);
+    if (logFile == NULL)
+        console_handler = GetStdHandle(STD_OUTPUT_HANDLE);
+    else {
+        fout = fopen(logFile, "a");
+    }
+#ifdef LOG_TO_FILE
+#define stderr fout
+#define stdout fout
+#endif
 }
 
 /* Log wsa error code converted to string with colorful output */

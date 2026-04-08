@@ -171,7 +171,7 @@ static Packet handleNewMessage(Packet messagePacket)
     }
 
     while (contact != NULL) {
-        if (strcmp(contact->nickname, senderNickname) != 0)
+        if (strcmp(contact->nickname, senderNickname) == 0)
             break;
         contact = contact->next;
     }

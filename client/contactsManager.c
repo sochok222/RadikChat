@@ -56,4 +56,5 @@ void addMessage(Contact *contact, const char *message, bool sender)
     strcpy(newMessage->message, message);
     newMessage->next = NULL;
     newMessage->sender = sender;
+    contact->chatHistory.messages++;
 }

@@ -66,7 +66,7 @@
 void logMessage(int mode, const TCHAR *format, ...);
 void logWsaError(int error_code);
 void logWinError(int error_code);
-void initDebug();
+void initDebug(const char *logFile);
 
 #define PRINT_WSA_ERROR(error) \
 	logWsaError(error)

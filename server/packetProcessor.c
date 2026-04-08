@@ -152,7 +152,7 @@ void processMessagePacket(ClientInfo *client)
         it = it->next;
     }
 
-    if (sendMessage(client, it, message) == true) {
+    if (it != NULL && sendMessage(client, it, message) == true) {
         DBG_DEBUG("Message sended successfully\n");
         toSender.status = STATUS_OK;
     }
@@ -175,7 +175,7 @@ static bool sendMessage(ClientInfo *from, ClientInfo *to, const char *message)
     in.data = NULL; out.data = NULL;
     TIMEVAL timeout;
     timeout.tv_sec = 3;
-    timeout.tv_usec = 0;
+    timeout.tv_usec = 500000;
 
     // Status and id are ignored
     out = createPacket(TYPE_DELIVERY, COMMAND_MESSAGE, STATUS_OK, 0);
@@ -186,10 +186,11 @@ static bool sendMessage(ClientInfo *from, ClientInfo *to, const char *message)
     sendPacket(to->socket, out, NULL);
     deletePacket(out);
 
-    for (cycle = 0; cycle < 3; cycle++) {
+    // FIXME: this cycle method is unreliable, add handling to select timeout
+    for (cycle = 0; cycle < 5; cycle++) {
         FD_ZERO(&fdRespond);
         FD_SET(to->socket, &fdRespond);
-        if (select(0, &fdRespond, NULL, NULL, &timeout) < 0) {
+        if (select(0, &fdRespond, NULL, NULL, NULL) < 0) {
             DBG_FATAL("select() failed.\n");
             logWsaError(WSAGetLastError());
             return false;
