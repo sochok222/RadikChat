@@ -66,9 +66,10 @@ void showPrivateChats(void)
 {
     DBG_FUNC();
     Contact *contact = contacts;
-    int max = 0, selected, i;
+    int max, selected, i;
 
     while (true) {
+        max = 0;
         system("cls");
 
         if (contact == NULL) {
@@ -121,16 +122,17 @@ void openChat(const Contact *contact)
             case 8: /* backspace */
                 if (inputPos >= 0) {
                     inputPos--;
+                    putch(ch);
                     putch(' ');
                     putch(ch);
                 }
                 break;
             case 13: case 10: /* enter key */
-                inputBuffer[inputPos + 1] = 0x0;
+                inputBuffer[inputPos] = 0x0;
+                inputPos = 0;
                 if (strcmp(inputBuffer, "/quit") == 0)
                     return;
                 sendMessage(socketServer, contact, inputBuffer);
-                inputPos = 0;
                 break;
             default:
                 inputBuffer[inputPos++] = ch;
