@@ -1,9 +1,6 @@
 #ifndef DEBUG_H
 #define DEBUG_H
 
-#include <stdbool.h>
-#include <TCHAR.h>
-
 #define DBG_MODE_FATAL 0
 #define DBG_MODE_ERROR 1
 #define DBG_MODE_WARNING 2
@@ -63,19 +60,30 @@
 #define DBG_FATAL(...)
 #endif
 
-void logMessage(int mode, const TCHAR *format, ...);
-void logWsaError(int error_code);
-void logWinError(int error_code);
-void initDebug(const char *logFile);
+typedef enum eConsoleFormatting
+{
+    fgRed = 0x01,
+    fgGreen = 0x02,
+    fgDefault = 0x04,
+    bgRed = 0x08,
+    bgGreen = 0x10,
+    bgDefault = 0x20,
+    formatDefault = fgDefault | bgDefault,
+    formatError = fgRed | bgDefault,
+    formatNotification = fgGreen | bgDefault,
+} TextFormat;
 
-#define PRINT_WSA_ERROR(error) \
-	logWsaError(error)
+void logMessage(int mode, const char *format, ...);
+void logWsaError(unsigned long error_code);
+void logWinError(unsigned long error_code);
+bool initDebug(const char *logFile);
+void setTextColor(TextFormat color);
 
-#define PRINT_WIN_ERROR(error) \
-	logWinError(error)
+#define PRINT_WSA_ERROR() \
+	logWsaError(WSAGetLastError())
 
-#define INIT_DEBUG() \
-	initDebug()
+#define PRINT_WIN_ERROR() \
+	logWinError(GetLastError())
 
 #else /* NO_DEBUG_BUILD */
 

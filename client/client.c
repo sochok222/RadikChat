@@ -1,13 +1,12 @@
-#include "client.h"
+#define _WIN32_WINNT 0x0500
+#include <windows.h>
 
 #include "chatsManager.h"
-
 #define LOG_TO_FILE
 #include <debug.h>
 #include <socketUtils.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <windows.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <synchapi.h>
@@ -21,15 +20,49 @@
 SOCKET  socketServer = INVALID_SOCKET;
 HANDLE  socketThreadRunMutex;
 
+bool SetConsoleSize(const COORD size) {
+    if (!SetConsoleScreenBufferSize(GetStdHandle(STD_OUTPUT_HANDLE), size))
+        return false;
+
+    CONSOLE_SCREEN_BUFFER_INFO csbi;
+
+    if (!GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi))
+        return false;
+
+    SMALL_RECT sr;
+
+    sr.Left = 0;
+    sr.Top = 0;
+    sr.Right = size.X - 1;
+    sr.Bottom = size.Y - 1;
+
+    if (!SetConsoleWindowInfo(GetStdHandle(STD_OUTPUT_HANDLE), TRUE, &sr))
+        return false;
+
+    return true;
+}
+
 int main(void)
 {
     WSADATA wsadata;
     int     unread = 0, choice;
     HANDLE  socketThreadMutex;
 
-    initDebug("client_logs.log");
+    initDebug(NULL);
     system("cls");
     socketThreadRunMutex = CreateMutex(NULL, TRUE, NULL);
+
+    // Set fixed console size
+    HWND consoleWindow = GetConsoleWindow();
+    HANDLE consoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+    CONSOLE_SCREEN_BUFFER_INFO csbi = {0};
+    GetConsoleScreenBufferInfo(consoleHandle, &csbi);
+    if (csbi.srWindow.Right < 130 || csbi.srWindow.Bottom < 35) {
+        printf("Invalid console size %dx%d.\nPlease, resize to 130x35 or larger size and start the program again.\n",
+                csbi.srWindow.Right, csbi.srWindow.Bottom);
+        return 0;
+    }
+    SetWindowLong(consoleWindow, GWL_STYLE, GetWindowLong(consoleWindow, GWL_STYLE) & ~WS_MAXIMIZEBOX & ~WS_SIZEBOX);
 
     if (WSAStartup(MAKEWORD(2, 2), &wsadata) != 0) {
         fprintf(stderr, "Error: Failed to initialize winsock\n");
@@ -78,6 +111,8 @@ int main(void)
     }
 
     exit:
+    SetWindowLong(consoleWindow, GWL_STYLE, GetWindowLong(consoleWindow, GWL_STYLE) & WS_MAXIMIZEBOX & WS_SIZEBOX);
+    setTextColor(fgDefault | bgDefault);
     if (socketServer != INVALID_SOCKET)
         closesocket(socketServer);
 
@@ -87,4 +122,3 @@ int main(void)
 
     WSACleanup();
 }
-
