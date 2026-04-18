@@ -137,6 +137,7 @@ void logMessage(int mode, const char *format, ...)
 	va_start(args, format);
         vfprintf(out, format, args);
 	va_end(args);
+    fflush(out);
 
     setTextColor(formatDefault);
 }

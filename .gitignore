@@ -3,3 +3,4 @@
 .idea/codeStyles/codeStyleConfig.xml
 /.idea
 *.h~
+/cmake-build-debug

@@ -71,6 +71,7 @@ typedef enum eConsoleFormatting
     formatDefault = fgDefault | bgDefault,
     formatError = fgRed | bgDefault,
     formatNotification = fgGreen | bgDefault,
+    formatSuccess = fgGreen | bgDefault,
 } TextFormat;
 
 void logMessage(int mode, const char *format, ...);

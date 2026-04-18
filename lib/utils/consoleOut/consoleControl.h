@@ -3,11 +3,15 @@
 
 #include <windows.h>
 
-void drawNotificationBar(void);
-void drawTextInputBar(void);
-void drawMainWindowBar(void);
 void inputThread(void*);
-
-extern HANDLE consoleOutMutex;
+void setAlternateConsoleBuffer(bool alternate);
+void setPos(int row, int col);
+void saveCursorPos();
+void restoreCursorPos();
+bool getConsoleSize(DWORD64 *size);
+void lockConsoleSize(bool lock);
+inline int getConsoleWidth(DWORD64 size);
+inline int getConsoleHeight(DWORD64 size);
+void clearCurrentRow(int width);
 
 #endif //RADIKCHAT_CONSOLECONTROL_H

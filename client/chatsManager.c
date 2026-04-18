@@ -9,6 +9,7 @@
 #include <conio.h>
 
 #include "clientUtils.h"
+#include "consoleOutput.h"
 #include "contactsManager.h"
 
 Contact *contacts = NULL;
@@ -25,7 +26,7 @@ bool logIn(const SOCKET socket)
 
     PendingRequest *request;
 
-    printf("Enter nickname or q to quit: ");
+    printRequest("Enter nickname or q to quit:");
     readInput(stdin, nickname, NICKNAME_LEN);
     if (strcmp(nickname, "q") == 0)
         return false;
@@ -47,7 +48,6 @@ bool logIn(const SOCKET socket)
 
     switch (in.status) {
     case STATUS_OK:
-        DBG_INFO("Login success\n");
         result = true;
         break;
     default:

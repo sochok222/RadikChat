@@ -12,6 +12,8 @@
 #include <synchapi.h>
 #include <process.h>
 #include "clientUtils.h"
+#include "consoleOutput.h"
+#include "consoleControl.h"
 
 #define BUFSIZE 1024
 #define SERVER_ADDRESS "192.168.0.184"
@@ -20,49 +22,30 @@
 SOCKET  socketServer = INVALID_SOCKET;
 HANDLE  socketThreadRunMutex;
 
-bool SetConsoleSize(const COORD size) {
-    if (!SetConsoleScreenBufferSize(GetStdHandle(STD_OUTPUT_HANDLE), size))
-        return false;
-
-    CONSOLE_SCREEN_BUFFER_INFO csbi;
-
-    if (!GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi))
-        return false;
-
-    SMALL_RECT sr;
-
-    sr.Left = 0;
-    sr.Top = 0;
-    sr.Right = size.X - 1;
-    sr.Bottom = size.Y - 1;
-
-    if (!SetConsoleWindowInfo(GetStdHandle(STD_OUTPUT_HANDLE), TRUE, &sr))
-        return false;
-
-    return true;
-}
-
 int main(void)
 {
     WSADATA wsadata;
     int     unread = 0, choice;
     HANDLE  socketThreadMutex;
+    DWORD64 consoleSize = 0;
 
-    initDebug(NULL);
+    initDebug("logs.log");
     system("cls");
     socketThreadRunMutex = CreateMutex(NULL, TRUE, NULL);
+    // Init console
+    setAlternateConsoleBuffer(true);
+    initConsoleOutput();
+    drawTextInputBar();
+    drawNotificationBar();
 
     // Set fixed console size
-    HWND consoleWindow = GetConsoleWindow();
-    HANDLE consoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
-    CONSOLE_SCREEN_BUFFER_INFO csbi = {0};
-    GetConsoleScreenBufferInfo(consoleHandle, &csbi);
-    if (csbi.srWindow.Right < 130 || csbi.srWindow.Bottom < 35) {
-        printf("Invalid console size %dx%d.\nPlease, resize to 130x35 or larger size and start the program again.\n",
-                csbi.srWindow.Right, csbi.srWindow.Bottom);
+    getConsoleSize(&consoleSize);
+    if (getConsoleWidth(consoleSize) < 119 || getConsoleHeight(consoleSize) < 29) {
+        printf("Invalid console size %dx%d.\nPlease, resize to 119x29 or larger size and start the program again.\n",
+               getConsoleWidth(consoleSize), getConsoleHeight(consoleSize));
         return 0;
     }
-    SetWindowLong(consoleWindow, GWL_STYLE, GetWindowLong(consoleWindow, GWL_STYLE) & ~WS_MAXIMIZEBOX & ~WS_SIZEBOX);
+    lockConsoleSize(true);
 
     if (WSAStartup(MAKEWORD(2, 2), &wsadata) != 0) {
         fprintf(stderr, "Error: Failed to initialize winsock\n");
@@ -79,10 +62,15 @@ int main(void)
     _beginthread(notificationThread, 0, NULL);
 
     if (!logIn(socketServer)) {
+        printError("Can't login\n");
         closesocket(socketServer);
         WSACleanup();
         return 1;
     }
+    printSuccess("Login success\n");
+    Sleep(1500);
+    clearNotificationBar();
+    clearTextInputBar();
     Sleep(1500);
 
     socketServerMutex = CreateMutex(NULL, FALSE, NULL);
@@ -111,7 +99,7 @@ int main(void)
     }
 
     exit:
-    SetWindowLong(consoleWindow, GWL_STYLE, GetWindowLong(consoleWindow, GWL_STYLE) & WS_MAXIMIZEBOX & WS_SIZEBOX);
+    lockConsoleSize(false);
     setTextColor(fgDefault | bgDefault);
     if (socketServer != INVALID_SOCKET)
         closesocket(socketServer);
