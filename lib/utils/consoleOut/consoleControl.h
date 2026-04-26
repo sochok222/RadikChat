@@ -3,15 +3,23 @@
 
 #include <windows.h>
 
+#define showCursor() setCursorVisibility(true)
+#define hideCursor() setCursorVisibility(false)
+
+bool initConsoleSize(void);
 void inputThread(void*);
 void setAlternateConsoleBuffer(bool alternate);
 void setPos(int row, int col);
-void saveCursorPos();
-void restoreCursorPos();
-bool getConsoleSize(DWORD64 *size);
+bool getConsoleSize(int *width, int *height);
 void lockConsoleSize(bool lock);
-inline int getConsoleWidth(DWORD64 size);
-inline int getConsoleHeight(DWORD64 size);
-void clearCurrentRow(int width);
+inline int getConsoleWidth(void);
+inline int getConsoleHeight(void);
+void clearCurrentLine(int width);
+bool enableVirtualProcessing(bool enable);
+bool disableSelection(bool disable);
+
+void setCursorVisibility(bool visible);
+
+extern HANDLE consoleCursorMutex;
 
 #endif //RADIKCHAT_CONSOLECONTROL_H

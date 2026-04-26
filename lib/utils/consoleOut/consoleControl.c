@@ -1,5 +1,6 @@
 #include "consoleControl.h"
 
+#include "consoleInput.h"
 #include "consoleOutput.h"
 
 #include <inttypes.h>
@@ -10,8 +11,20 @@
 #define PUBLIC
 #define PRIVATE static
 
+HANDLE consoleCursorMutex;
+static int consoleWidth, consoleHeight;
 
-bool getConsoleSize(DWORD64 *size)
+bool initConsoleSize(void)
+{
+    if (!getConsoleSize(&consoleWidth, &consoleHeight))
+        return false;
+
+    initInput(consoleWidth, consoleHeight);
+    initOutput(consoleWidth, consoleHeight);
+    return true;
+}
+
+bool getConsoleSize(int *width, int *height)
 {
     CONSOLE_SCREEN_BUFFER_INFO csbi;
 
@@ -19,10 +32,8 @@ bool getConsoleSize(DWORD64 *size)
         return false;
     }
 
-    *size = 0;
-    *size |= csbi.srWindow.Bottom;
-    *size <<= 32;
-    *size |= csbi.srWindow.Right;
+    *height = csbi.srWindow.Bottom + 1;
+    *width = csbi.srWindow.Right + 1;
     return true;
 }
 
@@ -38,21 +49,11 @@ void setPos(int row, int col)
 {
     char buffer[35] = CSI;
 
-    sprintf(buffer + strlen(buffer), "%d", row);
+    sprintf(buffer + strlen(buffer), "%d", row + 1);
     strcat(buffer, ";");
-    sprintf(buffer + strlen(buffer), "%d", col);
+    sprintf(buffer + strlen(buffer), "%d", col + 1);
     strcat(buffer, "H");
-    printf(buffer);
-}
-
-void saveCursorPos()
-{
-    printf(CSI"s");
-}
-
-void restoreCursorPos()
-{
-    printf(CSI"u");
+    printf("%s", buffer);
 }
 
 void lockConsoleSize(bool lock)
@@ -64,20 +65,76 @@ void lockConsoleSize(bool lock)
         SetWindowLong(consoleWindow, GWL_STYLE, GetWindowLong(consoleWindow, GWL_STYLE) & WS_MAXIMIZEBOX & WS_SIZEBOX);
 }
 
-int getConsoleWidth(DWORD64 size)
+int getConsoleWidth(void)
 {
-    return *(int*)&size;
+    return consoleWidth;
 }
 
-int getConsoleHeight(DWORD64 size)
+int getConsoleHeight(void)
 {
-    return *((int*)&size + 1);
+    return consoleHeight;
 }
 
-void clearCurrentRow(int width)
+void clearCurrentLine(int width)
 {
     char buffer[15] = CSI;
-    sprintf(buffer + strlen(buffer), "%d", width);
+    sprintf(buffer + strlen(buffer), "%d", width + 1);
     strcat(buffer, "@");
-    mprintf(buffer);
+    printf(buffer);
+}
+
+void setCursorVisibility(bool visible)
+{
+   if (visible == true) {
+       printf(CSI "?25h");
+   } else {
+       printf(CSI "?25l");
+   }
+}
+
+bool enableVirtualProcessing(bool enable)
+{
+    DWORD consoleMode = 0;
+    HANDLE stdHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+
+    if (!GetConsoleMode(stdHandle, &consoleMode)) {
+        DBG_ERROR("Can't get console mode\n");
+        return false;
+    }
+
+    if (enable == true)
+        consoleMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+    else
+        consoleMode &= ~ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+
+    if (!SetConsoleMode(stdHandle, consoleMode)) {
+        DBG_ERROR("Can't set console mode\n");
+        return false;
+    }
+
+    return true;
+}
+
+bool disableSelection(bool disable)
+{
+    DWORD consoleMode = 0;
+    HANDLE stdHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+
+    if (!GetConsoleMode(stdHandle, &consoleMode)) {
+        DBG_ERROR("Can't get console mode\n");
+        return false;
+    }
+
+    if (disable == true) {
+        consoleMode ^= ENABLE_QUICK_EDIT_MODE;
+    }
+    else
+        consoleMode &= ENABLE_QUICK_EDIT_MODE | ENABLE_EXTENDED_FLAGS;
+
+    if (!SetConsoleMode(stdHandle, consoleMode)) {
+        DBG_ERROR("Can't set console mode (%d)\n", GetLastError());
+        return false;
+    }
+
+    return true;
 }

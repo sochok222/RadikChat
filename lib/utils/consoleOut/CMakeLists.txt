@@ -8,10 +8,16 @@ set(${PROJECT_NAME}_src
 		consoleControl.c
 		consoleOutput.h
 		consoleOutput.c
+		consoleInput.h
+		consoleInput.c
 )
 
 add_library(${PROJECT_NAME} STATIC ${${PROJECT_NAME}_src})
 
 target_include_directories(${PROJECT_NAME} PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}/
+)
+
+target_link_libraries(${PROJECT_NAME} PUBLIC
+		Types
 )

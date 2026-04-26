@@ -3,4 +3,11 @@
 
 #include <windows.h>
 
+typedef struct sAppData
+{
+    size_t contactCount;
+} AppData;
+
+extern AppData appData;
+
 #endif //RADIKCHAT_CLIENT_H

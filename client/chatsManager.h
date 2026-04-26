@@ -2,27 +2,7 @@
 #define RADIKCHAT_CHATSMANAGER_H
 
 #include <winsock.h>
-
-typedef struct sMessage
-{
-    bool            sender; // true - 'our' false - 'their'
-    char            *message;
-    struct sMessage *next;
-} Message;
-
-typedef struct sChatHistory
-{
-    long long   messages;
-    Message     *head;
-} ChatHistory;
-
-typedef struct sContact
-{
-    char            *nickname;
-    int             unread;
-    ChatHistory     chatHistory;
-    struct sContact *next;
-} Contact;
+#include "contact.h"
 
 extern Contact *contacts;
 extern Contact *currentContact;

@@ -32,21 +32,6 @@ bool initDebug(const char *logFile)
         return true;
     }
 
-    HANDLE stdHandle;
-    stdHandle = GetStdHandle(STD_OUTPUT_HANDLE);
-
-    DWORD consoleMode = 0;
-    if (!GetConsoleMode(stdHandle, &consoleMode)) {
-        printf("Can't get console mode\n");
-        return false;
-    }
-
-    consoleMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
-    if (!SetConsoleMode(stdHandle, consoleMode)) {
-        printf("Can't set console mode\n");
-        return false;
-    }
-
     mStdout = stdout;
     mStderr = stderr;
     return true;

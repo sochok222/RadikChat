@@ -1,21 +1,24 @@
 #include "chatsManager.h"
 
+#include "client.h"
+
+#include <conio.h>
 #include <debug.h>
 #include <pendingOperation/request.h>
 #include <stdio.h>
 #include <synchapi.h>
 #include <windows.h>
 #include <ws2tcpip.h>
-#include <conio.h>
 
 #include "clientUtils.h"
+#include "consoleInput.h"
 #include "consoleOutput.h"
 #include "contactsManager.h"
 
 Contact *contacts = NULL;
 Contact *currentContact = NULL;
 
-static int  readInput(FILE *fp, char *buffer, size_t bufferSize);
+// static int  readInput(FILE *fp, char *buffer, size_t bufferSize);
 
 bool logIn(const SOCKET socket)
 {
@@ -27,7 +30,8 @@ bool logIn(const SOCKET socket)
     PendingRequest *request;
 
     printRequest("Enter nickname or q to quit:");
-    readInput(stdin, nickname, NICKNAME_LEN);
+    readInBuffer(nickname, NICKNAME_LEN);
+    clearRequest();
     if (strcmp(nickname, "q") == 0)
         return false;
 
@@ -66,29 +70,42 @@ void showPrivateChats(void)
 {
     DBG_FUNC();
     Contact *contact = contacts;
-    int max, selected, i;
+    int max, selected, i, ch, start = 0;
 
     while (true) {
-        max = 0;
-        system("cls");
-
         if (contact == NULL) {
-            printf("No contact found\n");
+            printNotification(formatDefault, "No contacts found\n");
             return;
         }
 
-        while (contact != NULL) {
-            max++;
-            printf("%d: %s - unread: %d\n", max, contact->nickname, contact->unread);
-            contact = contact->next;
+        printRequest("press u to go up, d to go down and i to enter insert mode");
+        while (true) {
+            printContacts(contact, start);
+            ch = getch();
+            if (ch == 'd') {
+                if (appData.contactCount - start > getMainAreaHeight())
+                    start++;
+                else
+                    printNotification(formatDefault, "Already at top");
+                printContacts(contact, start);
+            } else if (ch == 'u') {
+                if (start > 0)
+                    start--;
+                else
+                    printNotification(formatDefault, "Already at bottom");
+                printContacts(contact, start);
+            } else if (ch == 'i') {
+                break;
+            }
         }
-        printf("Select chat: ");
-        fseek(stdin, 0, SEEK_END);
-        scanf("%d", &selected);
+
+        printRequest("Select chat: ");
+        // TODO read input
+        // fseek(stdin, 0, SEEK_END);
+        // scanf("%d", &selected);
 
         if (selected > max || selected < 1) {
-            printf("No such option\n");
-            Sleep(1000);
+            printNotification(formatDefault, "No such option\n");
             continue;
         }
 
@@ -104,7 +121,6 @@ void openChat(const Contact *contact)
     char inputBuffer[100];
     int inputPos = 0, ch;
 
-    system("cls");
     printf("Chat with %s:\n", contact->nickname);
 
     Message *it = contact->chatHistory.head;
@@ -203,8 +219,9 @@ void createChat(SOCKET socket)
     char            nickname[NICKNAME_LEN+1];
     Packet          in, out;
 
-    printf("Enter nickname or q to quit: ");
-    readInput(stdin, nickname, NICKNAME_LEN);
+    printRequest("Enter nickname or q to quit: ");
+    readInBuffer(nickname, NICKNAME_LEN);
+    clearRequest();
 
     if (strcmp(nickname, "q") == 0)
         return;
@@ -212,6 +229,7 @@ void createChat(SOCKET socket)
     request = createRequest();
     if (request == NULL) {
         DBG_FATAL("Failed to create request\n");
+        printError("Can't create chat");
         return;
     }
     out = createPacket(TYPE_REQUEST, COMMAND_CREATE_CHAT, 0, request->id);
@@ -226,6 +244,7 @@ void createChat(SOCKET socket)
     switch (in.status) {
     case STATUS_OK:
         DBG_INFO("Chat created\n");
+        printSuccess("Chat created");
         createContact(nickname);
         break;
     default:
@@ -254,11 +273,11 @@ int updateUnreadMessages(void)
 
     return unread;
 }
-
-static int readInput(FILE *fp, char *buffer, size_t bufferSize)
-{
-    char format[16];
-    snprintf(format, sizeof(format), "%%%zus", bufferSize);
-    fseek(fp, 0, SEEK_END);
-    return fscanf(fp, format, buffer);
-}
+//
+// static int readInput(FILE *fp, char *buffer, size_t bufferSize)
+// {
+//     char format[16];
+//     snprintf(format, sizeof(format), "%%%zus", bufferSize);
+//     fseek(fp, 0, SEEK_END);
+//     return fscanf(fp, format, buffer);
+// }

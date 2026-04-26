@@ -1,6 +1,7 @@
 #include "clientUtils.h"
 
 #include "chatsManager.h"
+#include "consoleOutput.h"
 #include "contactsManager.h"
 #include "packetManager/packet.h"
 #include "pendingOperation/delivery.h"
@@ -102,6 +103,7 @@ static void addNotification(uint8_t *data)
     *notification = packetFromBytes(data);
 
     if (notification->data == NULL) {
+        printError("Received a notification, but cannot handle it");
         DBG_ERROR("notification data is NULL\n");
         if (notification->parseError == PARSE_ERROR_MALLOC_FAILED) {
             DBG_ERROR("Failed to allocate memory for notification\n");
@@ -143,6 +145,8 @@ void notificationThread(void*)
                 case COMMAND_MESSAGE:
                     respond = handleNewMessage(*notification);
                     sendPacket(socketServer, respond, &socketServerMutex);
+                    if (respond.status == STATUS_OK)
+                        printNotification(formatDefault, "Received a new notification\n");
                     deletePacket(respond);
                     break;
                 default:
@@ -196,26 +200,34 @@ void printStatusErrorMessage(PacketStatus packetStatus)
     switch (packetStatus) {
     case STATUS_FAILURE:
         DBG_ERROR("Status failed\n");
+        printError("Status failed\n");
         break;
     case STATUS_CANT_READ:
         DBG_WARNING("Server can't read data from the packet\n");
+        printError("Server can't read data from the packet\n");
         break;
     case STATUS_NOT_FOUND:
-        DBG_WARNING("Packet not found\n");
+        DBG_WARNING("Not found\n");
+        printError("Not found\n");
         break;
     case STATUS_ALREADY_EXISTS:
         DBG_WARNING("Status already exists\n");
+        printError("Status already exists\n");
         break;
     case STATUS_SERVER_ERROR:
         DBG_WARNING("Server error\n");
+        printError("Server error\n");
         break;
     case STATUS_SIZE_TOO_BIG:
         DBG_WARNING("Packet size too big\n");
+        printError("Packet size too big\n");
         break;
     case STATUS_ACTION_TO_HIMSELF:
         DBG_WARNING("Action to himself\n");
+        printError("Action to himself\n");
         break;
     default:
         DBG_ERROR("Unknown respond (%d)\n", packetStatus);
+        printError("Unknown respond (%d)\n", packetStatus);
     }
 }

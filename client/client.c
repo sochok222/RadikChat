@@ -3,17 +3,22 @@
 
 #include "chatsManager.h"
 #define LOG_TO_FILE
+#include "clientUtils.h"
+#include "consoleControl.h"
+#include "consoleInput.h"
+#include "consoleOutput.h"
+#include "contactsManager.h"
+
+#include <conio.h>
 #include <debug.h>
+#include <process.h>
 #include <socketUtils.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <synchapi.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
-#include <synchapi.h>
-#include <process.h>
-#include "clientUtils.h"
-#include "consoleOutput.h"
-#include "consoleControl.h"
+#include "client.h"
 
 #define BUFSIZE 1024
 #define SERVER_ADDRESS "192.168.0.184"
@@ -21,31 +26,37 @@
 
 SOCKET  socketServer = INVALID_SOCKET;
 HANDLE  socketThreadRunMutex;
+AppData appData;
+
+static void initConsole(void)
+{
+    initDebug("logs.log");
+    enableVirtualProcessing(true);
+    setAlternateConsoleBuffer(true);
+    disableSelection(true);
+    hideCursor();
+    initConsoleSize();
+
+    lockConsoleSize(true);
+    _beginthread(consoleDrawThread, 0, 0);
+}
 
 int main(void)
 {
     WSADATA wsadata;
     int     unread = 0, choice;
     HANDLE  socketThreadMutex;
-    DWORD64 consoleSize = 0;
+    appData.contactCount = 0;
 
-    initDebug("logs.log");
-    system("cls");
     socketThreadRunMutex = CreateMutex(NULL, TRUE, NULL);
-    // Init console
-    setAlternateConsoleBuffer(true);
-    initConsoleOutput();
-    drawTextInputBar();
-    drawNotificationBar();
 
+    initConsole();
     // Set fixed console size
-    getConsoleSize(&consoleSize);
-    if (getConsoleWidth(consoleSize) < 119 || getConsoleHeight(consoleSize) < 29) {
+    if (getConsoleWidth() < 119 || getConsoleHeight() < 29) {
         printf("Invalid console size %dx%d.\nPlease, resize to 119x29 or larger size and start the program again.\n",
-               getConsoleWidth(consoleSize), getConsoleHeight(consoleSize));
+               getConsoleWidth(), getConsoleHeight());
         return 0;
     }
-    lockConsoleSize(true);
 
     if (WSAStartup(MAKEWORD(2, 2), &wsadata) != 0) {
         fprintf(stderr, "Error: Failed to initialize winsock\n");
@@ -68,19 +79,14 @@ int main(void)
         return 1;
     }
     printSuccess("Login success\n");
-    Sleep(1500);
-    clearNotificationBar();
-    clearTextInputBar();
-    Sleep(1500);
 
     socketServerMutex = CreateMutex(NULL, FALSE, NULL);
 
     while (1) {
-        system("cls");
-        printf("You have %d unread messages\n", unread);
-        printf("Enter command: 1-list chats; 2-create chat; 0 - quit: ");
-        fseek(stdin,0,SEEK_END);
-        scanf("%d", &choice);
+        printRequest("Enter command: 1-list chats; 2-create chat; 0 - quit: ");
+
+        choice = readChar(false) - '0';
+        clearRequest();
 
         switch (choice) {
         case 0:
@@ -91,10 +97,8 @@ int main(void)
         case 2:
             createChat(socketServer);
             break;
-        case 3:
-            unread = updateUnreadMessages();
-            break;
         default:
+            printError("Invalid choice");
         }
     }
 

@@ -1,5 +1,6 @@
 #include "contactsManager.h"
 #include <debug.h>
+#include "client.h"
 
 static void initChatHistory(ChatHistory *chatHistory);
 
@@ -15,6 +16,7 @@ Contact *createContact(const char *nickname)
 
     contact->next = contacts;
     contacts = contact;
+    appData.contactCount++;
     return contact;
 }
 
