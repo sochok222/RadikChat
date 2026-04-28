@@ -71,6 +71,7 @@ void printRequest(const char *format, ...)
 {
     va_list args;
 
+    clearRequest();
     va_start(args, format);
     vprintToConsoleBuffer(consoleHeight - 2, 0, format, args);
     va_end(args);
@@ -117,7 +118,6 @@ void clearScreen(void)
 void printChatHistory(ChatHistory history, int startFrom)
 {
     int i = 0;
-    int startPos;
     if (startFrom <= 0 && startFrom > history.messages)
         return;
 
@@ -125,14 +125,21 @@ void printChatHistory(ChatHistory history, int startFrom)
         history.head = history.head->next;
     }
 
-    startPos = min(mainAreaStart + history.messages - startFrom, mainAreaEnd - 1);
-
-    drawSeparatorLine(mainAreaStart, 0);
+    drawSeparatorLine(mainAreaStart + 1, 0);
     drawSeparatorLine(mainAreaEnd, 0);
-    for (i = startPos; history.head != NULL && i > mainAreaStart; i--) {
+    for (i = mainAreaStart + 2; history.head != NULL && i < mainAreaEnd; i++) {
         writeToConsoleBuffer(history.head->message, strlen(history.head->message), i, 0);
         history.head = history.head->next;
     }
+}
+
+void printContactName(const char *format, ...)
+{
+    clearLine(mainAreaStart, 0);
+    va_list args;
+    va_start(args, format);
+    vprintToConsoleBuffer(mainAreaStart, 0, format, args);
+    va_end(args);
 }
 
 void printContacts(Contact *contact, int startFrom)
@@ -182,11 +189,11 @@ void consoleDrawThread(void *)
     _endthread();
 }
 
-static void writeToConsoleBuffer(const char *data, size_t size,  int row, int col)
+static void writeToConsoleBuffer(const char *data, size_t size, int row, int col)
 {
     WaitForSingleObject(consoleOutMutex, INFINITE);
     if (col < consoleWidth && row < consoleHeight) {
-        memset(consoleBuffer + calcPos(row, 1), 0, consoleWidth);
+        memset(consoleBuffer + calcPos(row, col), 0, consoleWidth);
         memcpy(consoleBuffer + calcPos(row, col), data, min(size, consoleWidth - col));
     }
     ReleaseMutex(consoleOutMutex);

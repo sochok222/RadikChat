@@ -21,6 +21,7 @@ void clearNotificationBar(void);
 void drawTextInputBar(void);
 void clearTextInputBar(void);
 void printChatHistory(ChatHistory history, int startFrom);
+void printContactName(const char *format, ...);
 void printContacts(Contact *contact, int startFrom);
 void writeToInputLine(const char *buffer);
 void clearScreen(void);

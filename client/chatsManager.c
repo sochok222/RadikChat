@@ -63,6 +63,7 @@ bool logIn(const SOCKET socket)
     if (out.data != NULL)
         deletePacket(out);
     deleteRequest(&request);
+    clearRequest();
     return result;
 }
 
@@ -70,6 +71,7 @@ void showPrivateChats(void)
 {
     DBG_FUNC();
     Contact *contact = contacts;
+    char input;
     int max, selected, i, ch, start = 0;
 
     while (true) {
@@ -78,7 +80,7 @@ void showPrivateChats(void)
             return;
         }
 
-        printRequest("press u to go up, d to go down and i to enter insert mode");
+        printRequest("press u to go up, d to go down and i to enter insert mode and q to quit");
         while (true) {
             printContacts(contact, start);
             ch = getch();
@@ -96,21 +98,24 @@ void showPrivateChats(void)
                 printContacts(contact, start);
             } else if (ch == 'i') {
                 break;
+            } else if (ch == 'q') {
+                clearScreen();
+                return;
             }
         }
 
         printRequest("Select chat: ");
-        // TODO read input
-        // fseek(stdin, 0, SEEK_END);
-        // scanf("%d", &selected);
+        readInBuffer(&input, sizeof(char));
+        selected = input - '0';
 
-        if (selected > max || selected < 1) {
+        if (selected > max || selected < 0) {
             printNotification(formatDefault, "No such option\n");
             continue;
         }
 
-        for (contact = contacts, i = 0; i < (selected - 1); i++)
+        for (contact = contacts, i = 0; i < (selected); i++)
             contact = contact->next;
+        clearRequest();
         openChat(contact);
     }
 }
@@ -119,42 +124,20 @@ void openChat(const Contact *contact)
 {
     DBG_FUNC();
     char inputBuffer[100];
-    int inputPos = 0, ch;
 
-    printf("Chat with %s:\n", contact->nickname);
-
-    Message *it = contact->chatHistory.head;
-
-    while (it != NULL) {
-        printf("%s: %s\n", it->sender == true ? "You" : contact->nickname, it->message);
-        it = it->next;
-    }
-
+    printContactName("Chat with %s:", contact->nickname);
+    printChatHistory(contact->chatHistory, 0);
+    printRequest("Type your message, type /quit to quit");
 
     // Process input and send messages
     while (true) {
-        if (_kbhit()) {
-            switch (ch = getch()) {
-            case 8: /* backspace */
-                if (inputPos >= 0) {
-                    inputPos--;
-                    putch(ch);
-                    putch(' ');
-                    putch(ch);
-                }
-                break;
-            case 13: case 10: /* enter key */
-                inputBuffer[inputPos] = 0x0;
-                inputPos = 0;
-                if (strcmp(inputBuffer, "/quit") == 0)
-                    return;
-                sendMessage(socketServer, contact, inputBuffer);
-                break;
-            default:
-                inputBuffer[inputPos++] = ch;
-                putch(ch);
-            }
+        readInBuffer(inputBuffer, sizeof(inputBuffer));
+        if (strcmp(inputBuffer, "/quit") == 0) {
+            clearScreen();
+            return;
         }
+        sendMessage(socketServer, contact, inputBuffer);
+        printChatHistory(contact->chatHistory, 0);
     }
 }
 
@@ -209,7 +192,7 @@ void sendMessage(const SOCKET socket, const Contact *contact, const char *messag
     }
     deleteRequest(&request);
     deletePacket(pIn); deletePacket(pOut);
-    Sleep(1500);
+    // Sleep(1500);
 }
 
 void createChat(SOCKET socket)
@@ -252,7 +235,6 @@ void createChat(SOCKET socket)
     }
 
     deleteRequest(&request);
-    Sleep(1500);
 }
 
 void deleteChat(const Contact *contact)
@@ -273,11 +255,3 @@ int updateUnreadMessages(void)
 
     return unread;
 }
-//
-// static int readInput(FILE *fp, char *buffer, size_t bufferSize)
-// {
-//     char format[16];
-//     snprintf(format, sizeof(format), "%%%zus", bufferSize);
-//     fseek(fp, 0, SEEK_END);
-//     return fscanf(fp, format, buffer);
-// }

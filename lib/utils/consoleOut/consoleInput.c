@@ -22,7 +22,6 @@ char *readInput()
     int inputPos = 0;
     int ch;
 
-    showCursor();
     clearTextInputBar();
     drawTextInputBar();
     setInputCursorPos();
@@ -39,7 +38,6 @@ char *readInput()
             case 13: case 10: /* enter key */
                 inputBuffer[inputPos] = 0x0;
                 clearTextInputBar();
-                hideCursor();
                 return inputBuffer;
             default:
                 if (inputPos < getConsoleWidth()) {
@@ -59,7 +57,12 @@ void readInBuffer(char *buffer, int bufferSize)
     int inputPos = 0;
     int ch;
 
-    // showCursor();
+    if (bufferSize == 1) {
+        fseek(stdin, 0, SEEK_END);
+        *buffer = getch();
+        return;
+    }
+
     clearTextInputBar();
     drawTextInputBar();
     setInputCursorPos();
@@ -76,10 +79,9 @@ void readInBuffer(char *buffer, int bufferSize)
             case 13: case 10: /* enter key */
                 buffer[inputPos] = 0x0;
                 clearTextInputBar();
-                hideCursor();
                 return;
             default:
-                if (inputPos < bufferSize) {
+                if (inputPos < bufferSize - 1) {
                     buffer[inputPos++] = ch;
                     buffer[inputPos] = '\0';
                     writeToInputLine(buffer);
