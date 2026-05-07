@@ -1,6 +1,7 @@
 #include "clientUtils.h"
 
 #include "chatsManager.h"
+#include "client.h"
 #include "consoleOutput.h"
 #include "contactsManager.h"
 #include "packetManager/packet.h"
@@ -77,7 +78,6 @@ void socketThread(void*)
 
         if ((request = pendingRequests[*(int*)(readBuffer + PACKET_ID_OFFSET)]) == NULL) {
             DBG_ERROR("pendingRequests[id] is NULL");
-            Sleep(1000);
             received -= *(int*)(readBuffer + PACKET_SIZE_OFFSET);
             continue;
         }
@@ -156,7 +156,6 @@ void notificationThread(void*)
             }
         }
         ReleaseMutex(notificationsMutex);
-        Sleep(1000);
     }
     _endthread();
 }
@@ -190,6 +189,7 @@ static Packet handleNewMessage(Packet messagePacket)
     }
 
     addMessage(contact, receivedMessage, false);
+    SetEvent(appData.messageEvent);
     respond.status = STATUS_OK;
 
     return respond;

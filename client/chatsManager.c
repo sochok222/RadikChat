@@ -15,10 +15,18 @@
 #include "consoleOutput.h"
 #include "contactsManager.h"
 
+#include <process.h>
+#include <processthreadsapi.h>
+
 Contact *contacts = NULL;
 Contact *currentContact = NULL;
 
-// static int  readInput(FILE *fp, char *buffer, size_t bufferSize);
+static DWORD WINAPI chatUpdateThread(void*);
+typedef struct sChatUpdateThreadArg
+{
+    ChatHistory *chatHistory;
+    int startFrom;
+} ChatUpdateThreadArg;
 
 bool logIn(const SOCKET socket)
 {
@@ -124,15 +132,23 @@ void openChat(const Contact *contact)
 {
     DBG_FUNC();
     char inputBuffer[100];
+    HANDLE chatUpdateThreadHandle;
+    ChatUpdateThreadArg chatUpdateArg;
 
     printContactName("Chat with %s:", contact->nickname);
     printChatHistory(contact->chatHistory, 0);
     printRequest("Type your message, type /quit to quit");
 
+    chatUpdateArg.chatHistory = &contact->chatHistory;
+    chatUpdateArg.startFrom = 0;
+
+    chatUpdateThreadHandle = CreateThread(NULL, 0, chatUpdateThread, &chatUpdateArg, 0, 0);
+
     // Process input and send messages
     while (true) {
         readInBuffer(inputBuffer, sizeof(inputBuffer));
         if (strcmp(inputBuffer, "/quit") == 0) {
+            TerminateThread(chatUpdateThreadHandle, 0);
             clearScreen();
             return;
         }
@@ -192,7 +208,6 @@ void sendMessage(const SOCKET socket, const Contact *contact, const char *messag
     }
     deleteRequest(&request);
     deletePacket(pIn); deletePacket(pOut);
-    // Sleep(1500);
 }
 
 void createChat(SOCKET socket)
@@ -254,4 +269,24 @@ int updateUnreadMessages(void)
     }
 
     return unread;
+}
+
+static DWORD WINAPI chatUpdateThread(void *arg)
+{
+    DBG_FUNC();
+    if (arg == NULL) {
+        DBG_ERROR("No contact is selected\n");
+        return 0;
+    }
+    ChatHistory *chatHistory = ((ChatUpdateThreadArg*)arg)->chatHistory;
+    int startFrom;
+
+    static DWORD waitRes;
+    while (true) {
+        waitRes = WaitForSingleObject(appData.messageEvent, INFINITE);
+        startFrom = ((ChatUpdateThreadArg*)arg)->startFrom;
+        if (waitRes == WAIT_OBJECT_0) {
+            printChatHistory(*chatHistory, startFrom);
+        }
+    }
 }

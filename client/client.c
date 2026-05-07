@@ -47,6 +47,7 @@ int main(void)
     int     unread = 0, choice;
     HANDLE  socketThreadMutex;
     appData.contactCount = 0;
+    appData.messageEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
 
     socketThreadRunMutex = CreateMutex(NULL, TRUE, NULL);
 

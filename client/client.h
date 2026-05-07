@@ -6,6 +6,7 @@
 typedef struct sAppData
 {
     size_t contactCount;
+    HANDLE messageEvent;
 } AppData;
 
 extern AppData appData;
