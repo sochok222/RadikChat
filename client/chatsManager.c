@@ -15,8 +15,8 @@
 #include "consoleOutput.h"
 #include "contactsManager.h"
 
-#include <process.h>
 #include <processthreadsapi.h>
+#include <time.h>
 
 Contact *contacts = NULL;
 Contact *currentContact = NULL;
@@ -25,6 +25,7 @@ static DWORD WINAPI chatUpdateThread(void*);
 typedef struct sChatUpdateThreadArg
 {
     ChatHistory *chatHistory;
+    HANDLE startFromMutex;
     int startFrom;
 } ChatUpdateThreadArg;
 
@@ -79,7 +80,7 @@ void showPrivateChats(void)
 {
     DBG_FUNC();
     Contact *contact = contacts;
-    char input;
+    static char input[128];
     int max, selected, i, ch, start = 0;
 
     while (true) {
@@ -113,15 +114,15 @@ void showPrivateChats(void)
         }
 
         printRequest("Select chat: ");
-        readInBuffer(&input, sizeof(char));
-        selected = input - '0';
+        readInBuffer(input, 128);
+        selected = atoi(input);
 
-        if (selected > max || selected < 0) {
+        if (selected > appData.contactCount || selected < 0) {
             printNotification(formatDefault, "No such option\n");
             continue;
         }
 
-        for (contact = contacts, i = 0; i < (selected); i++)
+        for (contact = contacts, i = 0; i < selected; i++)
             contact = contact->next;
         clearRequest();
         openChat(contact);
@@ -132,14 +133,16 @@ void openChat(const Contact *contact)
 {
     DBG_FUNC();
     char inputBuffer[100];
+    char ch;
     HANDLE chatUpdateThreadHandle;
     ChatUpdateThreadArg chatUpdateArg;
 
     printContactName("Chat with %s:", contact->nickname);
     printChatHistory(contact->chatHistory, 0);
-    printRequest("Type your message, type /quit to quit");
+    printRequest("Type your message, /quit to quit and /scroll to enter scroll mode");
 
     chatUpdateArg.chatHistory = &contact->chatHistory;
+    chatUpdateArg.startFromMutex = CreateMutex(NULL, FALSE, NULL);
     chatUpdateArg.startFrom = 0;
 
     chatUpdateThreadHandle = CreateThread(NULL, 0, chatUpdateThread, &chatUpdateArg, 0, 0);
@@ -152,8 +155,33 @@ void openChat(const Contact *contact)
             clearScreen();
             return;
         }
+        if (strcmp(inputBuffer, "/scroll") == 0) {
+            while (true) {
+                printRequest("press u to go up, d to go down, i to enter insert mode");
+                ch = readChar(false);
+                if (ch == 'u') {
+                    if (contact->chatHistory.messages - chatUpdateArg.startFrom <= getMainAreaHeight()) {
+                        printNotification(formatDefault, "Already at top");
+                    } else {
+                        WaitForSingleObject(chatUpdateArg.startFromMutex, INFINITE);
+                        chatUpdateArg.startFrom++;
+                        ReleaseMutex(chatUpdateArg.startFromMutex);
+                    }
+                } else if (ch == 'd') {
+                    if (chatUpdateArg.startFrom <= 0) {
+                        chatUpdateArg.startFrom = 0;
+                        printNotification(formatDefault, "Already at top");
+                    } else {
+                        WaitForSingleObject(chatUpdateArg.startFromMutex, INFINITE);
+                        chatUpdateArg.startFrom--;
+                        ReleaseMutex(chatUpdateArg.startFromMutex);
+                    }
+                } else if (ch == 'i') {
+                    break;
+                }
+            }
+        }
         sendMessage(socketServer, contact, inputBuffer);
-        printChatHistory(contact->chatHistory, 0);
     }
 }
 
@@ -177,6 +205,7 @@ void sendMessage(const SOCKET socket, const Contact *contact, const char *messag
         request = createRequest();
         if (request == NULL) {
             DBG_FATAL("Failed to create request\n");
+            printNotification(formatError, "Can't send message");
             return;
         }
 
@@ -188,7 +217,7 @@ void sendMessage(const SOCKET socket, const Contact *contact, const char *messag
         WaitForSingleObject(request->event, INFINITE);
         WaitForSingleObject(request->mutex, INFINITE);
 
-        pIn = packetFromBytes((char*)request->data);
+        pIn = packetFromBytes(request->data);
         deleteRequest(&request);
         if (pIn.data == NULL) {
             DBG_ERROR("Can't create packet from respond\n");
@@ -223,6 +252,12 @@ void createChat(SOCKET socket)
 
     if (strcmp(nickname, "q") == 0)
         return;
+
+    if (findContact(nickname) != NULL) {
+        DBG_INFO("Chat already created\n");
+        printNotification(formatDefault, "Chat already created");
+        return;
+    }
 
     request = createRequest();
     if (request == NULL) {

@@ -20,6 +20,21 @@ Contact *createContact(const char *nickname)
     return contact;
 }
 
+Contact *findContact(const char *nickname)
+{
+    DBG_FUNC();
+    Contact *p = contacts;
+    while (p != NULL) {
+        if (strcmp(p->nickname, nickname) == 0) {
+            DBG_DEBUG("Found contact\n");
+            return p;
+        }
+        p = p->next;
+    }
+    DBG_DEBUG("Contact not found\n");
+    return NULL;
+}
+
 void deleteContact(const char *nickname)
 {
     DBG_FUNC();
@@ -44,6 +59,7 @@ static void initChatHistory(ChatHistory *chatHistory)
 
 void addMessage(Contact *contact, const char *message, bool sender)
 {
+    DBG_FUNC();
     Message *it = contact->chatHistory.head;
     Message *newMessage = malloc(sizeof(*newMessage));
 
@@ -59,4 +75,17 @@ void addMessage(Contact *contact, const char *message, bool sender)
     newMessage->next = NULL;
     newMessage->sender = sender;
     contact->chatHistory.messages++;
+    SetEvent(appData.messageEvent);
+}
+
+int contactCount()
+{
+    DBG_FUNC();
+    Contact *p = contacts;
+    int count = 0;
+
+    while (p != NULL) {
+        count++;
+    }
+    return count;
 }

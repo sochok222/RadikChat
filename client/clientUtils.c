@@ -189,7 +189,6 @@ static Packet handleNewMessage(Packet messagePacket)
     }
 
     addMessage(contact, receivedMessage, false);
-    SetEvent(appData.messageEvent);
     respond.status = STATUS_OK;
 
     return respond;

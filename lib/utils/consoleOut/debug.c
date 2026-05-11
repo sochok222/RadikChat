@@ -150,3 +150,9 @@ void setTextColor(TextFormat color)
 
     printf(buffer);
 }
+
+void printTimeElapsed(const char *m, time_t start, time_t stop)
+{
+    double elapsed = (double)stop - start / CLOCKS_PER_SEC;
+    DBG_INFO("%s %d\n", m, elapsed);
+}

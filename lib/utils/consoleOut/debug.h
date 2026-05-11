@@ -9,7 +9,8 @@
 
 #define DEBUG_LEVEL 4
 
-#ifndef NO_DEBUG_BUILD 
+#ifndef NO_DEBUG_BUILD
+#include <time.h>
 
 #if DEBUG_LEVEL >= 5
 #define DBG_DEBUG(...)\
@@ -79,6 +80,7 @@ void logWsaError(unsigned long error_code);
 void logWinError(unsigned long error_code);
 bool initDebug(const char *logFile);
 void setTextColor(TextFormat color);
+void printTimeElapsed(const char *m, time_t start, time_t stop);
 
 #define PRINT_WSA_ERROR() \
 	logWsaError(WSAGetLastError())

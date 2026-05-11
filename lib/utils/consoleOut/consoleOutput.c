@@ -42,6 +42,7 @@ void initOutput(int width, int height)
 
 int getMainAreaHeight(void)
 {
+    // Main are height - border height
     return mainAreaEnd - mainAreaStart - 2;
 }
 
