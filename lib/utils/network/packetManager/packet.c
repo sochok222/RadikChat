@@ -1,5 +1,6 @@
 #include "packet.h"
 
+#include "consoleOutput.h"
 #include "debug.h"
 
 #include <stdlib.h>
@@ -79,25 +80,50 @@ void deletePacket(Packet packet)
 
 void sendPacket(SOCKET socket, Packet packet, HANDLE *socketMutex)
 {
-    int toSend = 0;
+    size_t totalSend = 0;
+    time_t start, stop;
+    uint8_t header[PACKET_HEADER_SIZE] = { 0 };
+    size_t offset = 0;
     if (socketMutex != NULL)
         WaitForSingleObject(*socketMutex, INFINITE);
 
+    // Packing data to header
+    start = clock();
     packet.size += PACKET_HEADER_SIZE;
-    send(socket, (char*)&packet.size, sizeof(packet.size), 0);
-    send(socket, (char*)&packet.type, sizeof(packet.type), 0);
-    send(socket, (char*)&packet.command, sizeof(packet.command), 0);
-    send(socket, (char*)&packet.status, sizeof(packet.status), 0);
-    send(socket, (char*)&packet.id, sizeof(packet.id), 0);
-    packet.size -= PACKET_HEADER_SIZE;
-    while (packet.size) {
-        toSend = packet.size > INT_MAX ? INT_MAX : (int)packet.size;
-        if (toSend == INT_MAX)
-            packet.size -= INT_MAX;
-        else
-            packet.size -= toSend;
-        send(socket, (char*)packet.data, toSend, 0);
+    memcpy(header + offset, &packet.size, sizeof(packet.size)); offset += sizeof(packet.size);
+    memcpy(header + offset, &packet.type, sizeof(packet.type)); offset += sizeof(packet.type);
+    memcpy(header + offset, &packet.command, sizeof(packet.command)); offset += sizeof(packet.command);
+    memcpy(header + offset, &packet.status, sizeof(packet.status)); offset += sizeof(packet.status);
+    memcpy(header + offset, &packet.id, sizeof(packet.id));
+
+    while (totalSend < PACKET_HEADER_SIZE) {
+        int sent = send(socket, header + totalSend, PACKET_HEADER_SIZE - totalSend, 0);
+        if (sent <= 0) {
+            DBG_FATAL("Can`t send packet to the server\n");
+            printNotification(formatError, "can`t send packet to the server");
+            exit(1);
+        }
+        totalSend += sent;
     }
+
+    packet.size -= PACKET_HEADER_SIZE;
+    stop = clock();
+    printTimeElapsed("elapsed time to send header", start, stop);
+    start = clock();
+
+    totalSend = 0;
+    while (totalSend < packet.size) {
+        int maxSend = packet.size - totalSend > INT_MAX ? INT_MAX : (int)(packet.size - totalSend);
+        int sent = send(socket, (char*)packet.data + totalSend, maxSend, 0);
+        if (sent <= 0) {
+            DBG_FATAL("Can`t send packet to the server\n");
+            printNotification(formatError, "can`t send packet to the server");
+            exit(1);
+        }
+        totalSend += sent;
+    }
+    stop = clock();
+    printTimeElapsed("elapsed time to send data", start, stop);
 
     if (socketMutex != NULL)
         ReleaseMutex(*socketMutex);
