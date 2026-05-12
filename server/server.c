@@ -25,7 +25,6 @@ int main(void)
     socketListen = createPassiveSocket(PORT, SOCK_STREAM, AF_INET, BACKLOG);
 
     DBG_INFO("Waiting for connections...\n");
-    DBG_INFO("Type offset: %d\n", PACKET_TYPE_OFFSET);
 	while (1) {
 	    fdReads = waitForClients(socketListen);
 	    if (FD_ISSET(socketListen, &fdReads)) {

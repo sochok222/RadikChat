@@ -52,7 +52,7 @@ bool logIn(const SOCKET socket)
 
     out = createPacket(TYPE_REQUEST, COMMAND_LOGIN, 0, request->id);
     addPacketString(&out, nickname);
-    sendPacket(socket, out, socketServerMutex);
+    sendPacket(socket, out, &socketServerMutex);
 
     WaitForSingleObject(request->event, INFINITE);
     WaitForSingleObject(request->mutex, INFINITE);
