@@ -118,7 +118,7 @@ bool enableVirtualProcessing(bool enable)
 bool disableSelection(bool disable)
 {
     DWORD consoleMode = 0;
-    HANDLE stdHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+    HANDLE stdHandle = GetStdHandle(STD_INPUT_HANDLE);
 
     if (!GetConsoleMode(stdHandle, &consoleMode)) {
         DBG_ERROR("Can't get console mode\n");
@@ -126,13 +126,15 @@ bool disableSelection(bool disable)
     }
 
     if (disable == true) {
-        consoleMode ^= ENABLE_QUICK_EDIT_MODE;
+        consoleMode |= ENABLE_EXTENDED_FLAGS;
+        consoleMode &= ~ENABLE_QUICK_EDIT_MODE;
     }
     else
         consoleMode &= ENABLE_QUICK_EDIT_MODE | ENABLE_EXTENDED_FLAGS;
 
     if (!SetConsoleMode(stdHandle, consoleMode)) {
-        DBG_ERROR("Can't set console mode (%d)\n", GetLastError());
+        DBG_ERROR("Can't set console mode\n");
+        logWinError(GetLastError());
         return false;
     }
 

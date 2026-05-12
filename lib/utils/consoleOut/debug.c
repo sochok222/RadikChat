@@ -69,24 +69,25 @@ void logWsaError(unsigned long error_code)
 
 void logWinError(unsigned long error_code)
 {
-    LPVOID lpMsgBuf;
+    wchar_t *lpMsgBuf = NULL;
 
-    if (FormatMessage(
+    if (FormatMessageW(
         FORMAT_MESSAGE_ALLOCATE_BUFFER |
         FORMAT_MESSAGE_FROM_SYSTEM |
         FORMAT_MESSAGE_IGNORE_INSERTS,
         NULL,
         error_code,
         MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-        (LPTSTR) &lpMsgBuf,
+        (LPWSTR)&lpMsgBuf,
         0, NULL) == 0) {
         MessageBox(NULL, TEXT("FormatMessage failed"), TEXT("Error"), MB_OK);
         ExitProcess(error_code);
     }
 
     setTextColor(fgRed | bgDefault);
-    fprintf(mStderr, "%S", (LPCSTR)lpMsgBuf);
+    fprintf(mStderr, "[WINERROR]: %S", lpMsgBuf);
     setTextColor(formatDefault);
+    fflush(mStderr);
 
     LocalFree(lpMsgBuf);
 }

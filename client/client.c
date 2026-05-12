@@ -44,7 +44,7 @@ static void initConsole(void)
 int main(void)
 {
     WSADATA wsadata;
-    int     unread = 0, choice;
+    int     choice;
     HANDLE  socketThreadMutex;
     appData.contactCount = 0;
     appData.messageEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
@@ -105,6 +105,7 @@ int main(void)
 
     exit:
     lockConsoleSize(false);
+    disableSelection(false);
     setTextColor(fgDefault | bgDefault);
     if (socketServer != INVALID_SOCKET)
         closesocket(socketServer);
