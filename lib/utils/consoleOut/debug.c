@@ -154,6 +154,6 @@ void setTextColor(TextFormat color)
 
 void printTimeElapsed(const char *m, time_t start, time_t stop)
 {
-    double elapsed = (double)stop - start / CLOCKS_PER_SEC;
-    DBG_INFO("%s %f\n", m, elapsed);
+    double elapsed = ((double)stop - start) / CLOCKS_PER_SEC;
+    DBG_INFO("%s %lf\n", m, elapsed);
 }

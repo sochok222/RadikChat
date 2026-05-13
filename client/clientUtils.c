@@ -17,7 +17,7 @@
 static fd_set fdMaster;
 
 HANDLE socketServerMutex;
-HANDLE notificationsMutex;
+HANDLE notificationsSemaphore;
 HANDLE notificationThreadRunMutex;
 
 static Packet   handleNewMessage(Packet p);
@@ -50,6 +50,7 @@ void socketThread(void*)
 {
     int     received = 0;
     uint8_t readBuffer[MAX_READ_BUFFER_SIZE];
+    notificationsSemaphore = CreateSemaphore(NULL, 0, 100, NULL);
     PendingRequest *request = NULL;
 
     while (WaitForSingleObject(socketThreadRunMutex, 75L) == WAIT_TIMEOUT) {
@@ -71,8 +72,15 @@ void socketThread(void*)
             continue;
 
         if (*(int*)(readBuffer + PACKET_TYPE_OFFSET) == TYPE_DELIVERY) {
+            Packet notification, respond;
             DBG_INFO("Received a delivery\n");
-            addNotification(readBuffer);
+            // addNotification(readBuffer);
+            notification = packetFromBytes(readBuffer);
+            respond = handleNewMessage(notification);
+            sendPacket(socketServer, respond, &socketServerMutex);
+            deletePacket(notification);
+            deletePacket(respond);
+
             goto clear;
         }
 
@@ -138,7 +146,7 @@ void notificationThread(void*)
     Packet *notification;
     Packet respond;
     while (true) {
-        WaitForSingleObject(notificationsMutex, INFINITE);
+        WaitForSingleObject(notificationsSemaphore, INFINITE);
         for (int i = 0; i < MAX_NOTIFICATIONS; i++) {
             if ((notification = notifications[i]) != NULL) {
                 switch (notification->command) {
@@ -155,7 +163,7 @@ void notificationThread(void*)
                 deleteNotification(&notifications[i]);
             }
         }
-        ReleaseMutex(notificationsMutex);
+        ReleaseMutex(notificationsSemaphore);
     }
     _endthread();
 }

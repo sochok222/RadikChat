@@ -150,6 +150,8 @@ void openChat(const Contact *contact)
     // Process input and send messages
     while (true) {
         readInBuffer(inputBuffer, sizeof(inputBuffer));
+        if (strlen(inputBuffer) == 0)
+            continue;
         if (strcmp(inputBuffer, "/quit") == 0) {
             TerminateThread(chatUpdateThreadHandle, 0);
             clearScreen();
@@ -232,6 +234,13 @@ void sendMessage(const SOCKET socket, const Contact *contact, const char *messag
         DBG_INFO("Message sent\n");
         addMessage(contact, message, true);
         break;
+    case STATUS_FAILURE:
+        DBG_ERROR("Message sending failed\n");
+        printNotification(formatError, "Can't send message");
+        break;
+    case STATUS_NOT_FOUND:
+        DBG_ERROR("Server did not find contact\n");
+        printNotification(formatError, "Contact is not logined");
     default:
         printStatusErrorMessage(respond);
     }

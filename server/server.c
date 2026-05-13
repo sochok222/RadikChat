@@ -58,6 +58,7 @@ int main(void)
 	    }
 	    // Process packets
 	    client = clients;
+	    time_t start, stop;
 	    while (client != NULL) { // TODO add maximum time to store packet that can't process
 	        if (client->receivedBytes < PACKET_HEADER_SIZE || *(size_t*)(client->buffer + PACKET_SIZE_OFFSET) > client->receivedBytes) {
 	            client = client->next;
@@ -69,7 +70,9 @@ int main(void)
 	        } else if (packetCommand == COMMAND_CREATE_CHAT) {
 	            processCreateChatPacket(client);
 	        } else if (packetCommand == COMMAND_MESSAGE) {
+	            start = clock();
 	            processMessagePacket(client);
+	            stop = clock();
 	        }
 	        // clear packet
 	        client->receivedBytes -= *(int*)(client->buffer + PACKET_SIZE_OFFSET);

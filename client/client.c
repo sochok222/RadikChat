@@ -64,10 +64,17 @@ int main(void)
         return 1;
     }
 
+reconnect:
+    printNotification(formatDefault, "Trying to connect...");
     socketServer = createActiveSocket(SERVER_ADDRESS, SERVER_PORT, SOCK_STREAM);
     if (socketServer == INVALID_SOCKET) {
-        printf("Error creating socket\n");
-        return 1;
+        // printf("Error creating socket\n");
+        printNotification(formatError, "Can't connect to the server. Press any button to try again or q to quit");
+        if (getch() == 'q') {
+            system("cls");
+            return 0;
+        }
+        goto reconnect;
     }
     socketThreadMutex = (HANDLE)_beginthread(socketThread, 0, NULL);
     // TODO add handle for run mutex

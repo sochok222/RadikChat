@@ -151,13 +151,17 @@ void processMessagePacket(ClientInfo *client)
         }
         it = it->next;
     }
+    if (it == NULL) {
+        DBG_ERROR("Can't find client\n");
+        toSender.status = STATUS_NOT_FOUND;
+    }
 
     if (it != NULL && sendMessage(client, it, message) == true) {
-        DBG_DEBUG("Message sended successfully\n");
+        DBG_INFO("Message sent successfully\n");
         toSender.status = STATUS_OK;
     }
     else {
-        DBG_DEBUG("Failed to send message\n");
+        DBG_INFO("Failed to send message\n");
         toSender.status = STATUS_FAILURE;
     }
 
@@ -173,9 +177,6 @@ static bool sendMessage(ClientInfo *from, ClientInfo *to, const char *message)
     int         cycle, totalReceived = 0;
     char        buffer[100];
     in.data = NULL; out.data = NULL;
-    TIMEVAL timeout;
-    timeout.tv_sec = 3;
-    timeout.tv_usec = 500000;
 
     // Status and id are ignored
     out = createPacket(TYPE_DELIVERY, COMMAND_MESSAGE, STATUS_OK, 0);

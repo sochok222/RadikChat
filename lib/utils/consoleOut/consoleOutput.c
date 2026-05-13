@@ -122,6 +122,12 @@ void printChatHistory(ChatHistory history, int startFrom)
     if (startFrom <= 0 && startFrom > history.messages)
         return;
 
+    if (getMainAreaHeight() < history.messages) {
+        for (int i = 0; i < history.messages - getMainAreaHeight(); i++) {
+            history.head = history.head->next;
+        }
+    }
+
     for (; i < startFrom; i++) {
         history.head = history.head->next;
     }

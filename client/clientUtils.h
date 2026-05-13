@@ -9,7 +9,7 @@ extern SOCKET socketServer;
 extern HANDLE socketServerMutex;
 extern HANDLE socketThreadRunMutex;
 
-extern HANDLE notificationsMutex;
+extern HANDLE notificationsSemaphore;
 extern HANDLE notificationThreadRunMutex;
 
 void    initClientUtils();
