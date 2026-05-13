@@ -73,7 +73,7 @@ int main(void)
 	        }
 	        // clear packet
 	        client->receivedBytes -= *(int*)(client->buffer + PACKET_SIZE_OFFSET);
-	        memmove(client->buffer, client->buffer + *(int*)(client->buffer + PACKET_SIZE_OFFSET), *(int*)(client->buffer + PACKET_SIZE_OFFSET));
+	        memmove(client->buffer, client->buffer + *(int*)(client->buffer + PACKET_SIZE_OFFSET), client->receivedBytes);
 	        client = client->next;
 	    }
 	}

@@ -76,17 +76,13 @@ char *getClientAddress(ClientInfo *client)
 
 fd_set waitForClients(SOCKET server)
 {
-    struct timeval timeout;
     fd_set fdReads;
     if (!FD_ISSET(server, &fdMaster))
         FD_SET(server, &fdMaster);
 
     fdReads = fdMaster;
 
-    timeout.tv_sec = 0;
-    timeout.tv_usec = 100000;
-
-    if (select(0, &fdReads, 0, 0, &timeout) < 0) {
+    if (select(0, &fdReads, 0, 0, NULL) < 0) {
         DBG_FATAL("select() failed.\n");
         logWsaError(WSAGetLastError());
         exit(1); // TODO: add proper error handling
