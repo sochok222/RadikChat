@@ -20,11 +20,13 @@ static HANDLE hStdOut;
 static HANDLE consoleOutMutex;
 static HANDLE consoleOutSemaphore;
 
-static void writeToConsoleBuffer(const char *data, size_t size, int row, int col);
+static void writeToConsoleBuffer(const char *data, size_t size, int row, int col, bool updateScreen);
 static void vprintToConsoleBuffer(int row, int col, const char *format, va_list args);
 static void printToConsoleBuffer(int row, int col, const char *format, ...);
+static void clearBufferLine(int row, int col);
 static void clearLine(int row, int col);
-static void drawSeparatorLine(int row, int col);
+static void drawSeparatorLine(int row, int col, bool updateScreen);
+static void redrawConsole(void);
 
 void initOutput(int width, int height)
 {
@@ -87,7 +89,7 @@ void printNotification(TextFormat textFormat, const char *format, ...)
 {
     va_list args;
 
-    writeToConsoleBuffer("Last Notification: ", strlen("Last Notification: "), 0, 0);
+    writeToConsoleBuffer("Last Notification: ", strlen("Last Notification: "), 0, 0, true);
     va_start(args, format);
     vprintToConsoleBuffer(0, strlen("Last Notification: "), format, args);
     va_end(args);
@@ -100,7 +102,7 @@ void clearNotificationBar(void)
 
 void drawTextInputBar(void)
 {
-    writeToConsoleBuffer(">", 1, consoleHeight - 1, 0);
+    writeToConsoleBuffer(">", 1, consoleHeight - 1, 0, true);
 }
 
 void clearTextInputBar(void)
@@ -123,21 +125,23 @@ void printChatHistory(ChatHistory history, int startFrom)
         return;
 
     if (getMainAreaHeight() < history.messages) {
-        for (int i = 0; i < history.messages - getMainAreaHeight(); i++) {
+        for (int i = 0; i < history.messages - getMainAreaHeight() - startFrom; i++) {
             history.head = history.head->next;
         }
     }
 
-    for (; i < startFrom; i++) {
-        history.head = history.head->next;
-    }
+    drawSeparatorLine(mainAreaStart + 1, 0, false);
+    drawSeparatorLine(mainAreaEnd, 0, false);
 
-    drawSeparatorLine(mainAreaStart + 1, 0);
-    drawSeparatorLine(mainAreaEnd, 0);
+    // Clear chat frame
+    for (i = mainAreaStart + 2; history.head != NULL && i < mainAreaEnd; i++)
+        clearBufferLine(i, 0);
+
     for (i = mainAreaStart + 2; history.head != NULL && i < mainAreaEnd; i++) {
-        writeToConsoleBuffer(history.head->message, strlen(history.head->message), i, 0);
+        writeToConsoleBuffer(history.head->message, strlen(history.head->message), i, 0, false);
         history.head = history.head->next;
     }
+    redrawConsole();
 }
 
 void printContactName(const char *format, ...)
@@ -161,8 +165,9 @@ void printContacts(Contact *contact, int startFrom)
         contact = contact->next;
     }
 
-    drawSeparatorLine(mainAreaStart, 0);
-    drawSeparatorLine(mainAreaEnd, 0);
+    // TODO optimize this like in printChatHistory
+    drawSeparatorLine(mainAreaStart, 0, true);
+    drawSeparatorLine(mainAreaEnd, 0, true);
     for (i = startPos; contact != NULL && i < mainAreaEnd; i++) {
         printToConsoleBuffer(i, 0, "%d - %s", startFrom++, contact->nickname);
         contact = contact->next;
@@ -171,14 +176,32 @@ void printContacts(Contact *contact, int startFrom)
 
 void writeToInputLine(const char *buffer)
 {
-    writeToConsoleBuffer(buffer, strlen(buffer), consoleHeight - 1, 2);
+    writeToConsoleBuffer(buffer, strlen(buffer), consoleHeight - 1, 2, true);
+}
+
+static CHAR_INFO *toCHAR_INFOArray(const char *buffer)
+{
+    static CHAR_INFO *charArray = NULL;
+    if (charArray == NULL) {
+        charArray = malloc(sizeof(CHAR_INFO) * consoleWidth * consoleHeight);
+    }
+    memset(charArray, 0, sizeof(CHAR_INFO) * consoleWidth * consoleHeight);
+
+    for (register int i = 0; i < consoleWidth * consoleHeight; i++) {
+        charArray[i].Char.AsciiChar = buffer[i];
+        charArray[i].Attributes = FOREGROUND_GREEN | BACKGROUND_BLUE;
+    }
+
+    return charArray;
 }
 
 void consoleDrawThread(void *)
 {
-    register int i;
     DWORD written;
     COORD pos = {0, 0};
+
+    SetPriorityClass(GetCurrentProcess(), REALTIME_PRIORITY_CLASS);
+    SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
 
     while (true) {
         WaitForSingleObject(consoleOutSemaphore, INFINITE);
@@ -196,7 +219,7 @@ void consoleDrawThread(void *)
     _endthread();
 }
 
-static void writeToConsoleBuffer(const char *data, size_t size, int row, int col)
+static void writeToConsoleBuffer(const char *data, size_t size, int row, int col, bool updateScreen)
 {
     WaitForSingleObject(consoleOutMutex, INFINITE);
     if (col < consoleWidth && row < consoleHeight) {
@@ -204,7 +227,8 @@ static void writeToConsoleBuffer(const char *data, size_t size, int row, int col
         memcpy(consoleBuffer + calcPos(row, col), data, min(size, consoleWidth - col));
     }
     ReleaseMutex(consoleOutMutex);
-    ReleaseSemaphore(consoleOutSemaphore, 1, NULL);
+    if (updateScreen)
+        ReleaseSemaphore(consoleOutSemaphore, 1, NULL);
 }
 
 static void vprintToConsoleBuffer(int row, int col, const char *format, va_list args)
@@ -225,6 +249,13 @@ static void printToConsoleBuffer(int row, int col, const char *format, ...)
     va_end(args);
 }
 
+static void clearBufferLine(int row, int col)
+{
+    if (col < consoleWidth && row < consoleHeight) {
+        memset(consoleBuffer + calcPos(row, col), 0, consoleWidth - col);
+    }
+}
+
 static void clearLine(int row, int col)
 {
     WaitForSingleObject(consoleOutMutex, INFINITE);
@@ -235,12 +266,18 @@ static void clearLine(int row, int col)
     ReleaseSemaphore(consoleOutSemaphore, 1, NULL);
 }
 
-static void drawSeparatorLine(int row, int col)
+static void drawSeparatorLine(int row, int col, bool updateScreen)
 {
     WaitForSingleObject(consoleOutMutex, INFINITE);
     if (col < consoleWidth && row < consoleHeight) {
         memset(consoleBuffer + calcPos(row, col), '-', consoleWidth - col);
     }
     ReleaseMutex(consoleOutMutex);
+    if (updateScreen)
+        ReleaseSemaphore(consoleOutSemaphore, 1, NULL);
+}
+
+static void redrawConsole(void)
+{
     ReleaseSemaphore(consoleOutSemaphore, 1, NULL);
 }

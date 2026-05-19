@@ -106,7 +106,6 @@ void processMessagePacket(ClientInfo *client)
     DBG_FUNC();
     ClientInfo  *it;
     int         requestId;
-    bool        toRespond;
     char        *nickname, *message;
     size_t      readPos = 0;
     Packet      in, toSender;

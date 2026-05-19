@@ -81,14 +81,12 @@ void deletePacket(Packet packet)
 void sendPacket(SOCKET socket, Packet packet, HANDLE *socketMutex)
 {
     size_t totalSend = 0;
-    time_t start, stop;
     uint8_t header[PACKET_HEADER_SIZE] = { 0 };
     size_t offset = 0;
     if (socketMutex != NULL)
         WaitForSingleObject(*socketMutex, INFINITE);
 
     // Packing data to header
-    start = clock();
     packet.size += PACKET_HEADER_SIZE;
     memcpy(header + offset, &packet.size, sizeof(packet.size)); offset += sizeof(packet.size);
     memcpy(header + offset, &packet.type, sizeof(packet.type)); offset += sizeof(packet.type);
@@ -107,9 +105,6 @@ void sendPacket(SOCKET socket, Packet packet, HANDLE *socketMutex)
     }
 
     packet.size -= PACKET_HEADER_SIZE;
-    stop = clock();
-    printTimeElapsed("elapsed time to send header", start, stop);
-    start = clock();
 
     totalSend = 0;
     while (totalSend < packet.size) {
@@ -122,8 +117,6 @@ void sendPacket(SOCKET socket, Packet packet, HANDLE *socketMutex)
         }
         totalSend += sent;
     }
-    stop = clock();
-    printTimeElapsed("elapsed time to send data", start, stop);
 
     if (socketMutex != NULL)
         ReleaseMutex(*socketMutex);

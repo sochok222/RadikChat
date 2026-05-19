@@ -113,7 +113,6 @@ reconnect:
     exit:
     lockConsoleSize(false);
     disableSelection(false);
-    setTextColor(fgDefault | bgDefault);
     if (socketServer != INVALID_SOCKET)
         closesocket(socketServer);
 

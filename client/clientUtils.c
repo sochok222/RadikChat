@@ -21,7 +21,6 @@ HANDLE notificationsSemaphore;
 HANDLE notificationThreadRunMutex;
 
 static Packet   handleNewMessage(Packet p);
-static void     addNotification(uint8_t *data);
 static void     deleteNotification(Packet **notification);
 
 void initClientUtils()
@@ -105,32 +104,6 @@ void socketThread(void*)
     _endthread();
 }
 
-static void addNotification(uint8_t *data)
-{
-    Packet *notification = malloc(sizeof(*notification));
-    *notification = packetFromBytes(data);
-
-    if (notification->data == NULL) {
-        printError("Received a notification, but cannot handle it");
-        DBG_ERROR("notification data is NULL\n");
-        if (notification->parseError == PARSE_ERROR_MALLOC_FAILED) {
-            DBG_ERROR("Failed to allocate memory for notification\n");
-        } else {
-            DBG_ERROR("notification data size is not correct (%ull)\n", notification->size);
-        }
-        return;
-    }
-
-    for (int i = 0; i < MAX_NOTIFICATIONS; i++) {
-        if (notifications[i] == NULL) {
-            notifications[i] = notification;
-            return;
-        }
-    }
-    DBG_ERROR("Notifications are full\n");
-    deleteNotification(&notification);
-}
-
 static void deleteNotification(Packet **notification)
 {
     if (notification == NULL || *notification == NULL)
@@ -145,6 +118,10 @@ void notificationThread(void*)
 {
     Packet *notification;
     Packet respond;
+
+    SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
+    SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
+
     while (true) {
         WaitForSingleObject(notificationsSemaphore, INFINITE);
         for (int i = 0; i < MAX_NOTIFICATIONS; i++) {

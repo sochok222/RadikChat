@@ -168,20 +168,24 @@ void openChat(const Contact *contact)
                         WaitForSingleObject(chatUpdateArg.startFromMutex, INFINITE);
                         chatUpdateArg.startFrom++;
                         ReleaseMutex(chatUpdateArg.startFromMutex);
+                        SetEvent(appData.messageEvent);
                     }
                 } else if (ch == 'd') {
                     if (chatUpdateArg.startFrom <= 0) {
                         chatUpdateArg.startFrom = 0;
-                        printNotification(formatDefault, "Already at top");
+                        printNotification(formatDefault, "Already at bottom");
                     } else {
                         WaitForSingleObject(chatUpdateArg.startFromMutex, INFINITE);
                         chatUpdateArg.startFrom--;
                         ReleaseMutex(chatUpdateArg.startFromMutex);
+                        SetEvent(appData.messageEvent);
                     }
                 } else if (ch == 'i') {
                     break;
                 }
             }
+            inputBuffer[0] = '\0';
+            continue;
         }
         sendMessage(socketServer, contact, inputBuffer);
     }
