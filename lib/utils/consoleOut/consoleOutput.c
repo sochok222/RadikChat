@@ -137,8 +137,9 @@ void printChatHistory(ChatHistory history, int startFrom)
     for (i = mainAreaStart + 2; history.head != NULL && i < mainAreaEnd; i++)
         clearBufferLine(i, 0);
 
+    // Print messages
     for (i = mainAreaStart + 2; history.head != NULL && i < mainAreaEnd; i++) {
-        writeToConsoleBuffer(history.head->message, strlen(history.head->message), i, 0, false);
+        writeToConsoleBuffer(history.head->text, strlen(history.head->text), i, 0, false);
         history.head = history.head->next;
     }
     redrawConsole();
@@ -177,22 +178,6 @@ void printContacts(Contact *contact, int startFrom)
 void writeToInputLine(const char *buffer)
 {
     writeToConsoleBuffer(buffer, strlen(buffer), consoleHeight - 1, 2, true);
-}
-
-static CHAR_INFO *toCHAR_INFOArray(const char *buffer)
-{
-    static CHAR_INFO *charArray = NULL;
-    if (charArray == NULL) {
-        charArray = malloc(sizeof(CHAR_INFO) * consoleWidth * consoleHeight);
-    }
-    memset(charArray, 0, sizeof(CHAR_INFO) * consoleWidth * consoleHeight);
-
-    for (register int i = 0; i < consoleWidth * consoleHeight; i++) {
-        charArray[i].Char.AsciiChar = buffer[i];
-        charArray[i].Attributes = FOREGROUND_GREEN | BACKGROUND_BLUE;
-    }
-
-    return charArray;
 }
 
 void consoleDrawThread(void *)

@@ -1,10 +1,18 @@
 #ifndef RADIKCHAT_CONTACT_H
 #define RADIKCHAT_CONTACT_H
 
+typedef enum
+{
+    MESSAGE_SEND_FAILED,
+    MESSAGE_SEND_SUCCESS,
+    MESSAGE_SEND_PENDING,
+} MessageState;
+
 typedef struct sMessage
 {
     bool            sender; // true - 'our' false - 'their'
-    char            *message;
+    bool            state;
+    char            *text;
     struct sMessage *next;
 } Message;
 

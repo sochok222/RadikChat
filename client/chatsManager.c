@@ -15,6 +15,7 @@
 #include "consoleOutput.h"
 #include "contactsManager.h"
 
+#include <process.h>
 #include <processthreadsapi.h>
 #include <time.h>
 
@@ -139,7 +140,6 @@ void openChat(const Contact *contact)
 
     printContactName("Chat with %s:", contact->nickname);
     printChatHistory(contact->chatHistory, 0);
-    printRequest("Type your message, /quit to quit and /scroll to enter scroll mode");
 
     chatUpdateArg.chatHistory = &contact->chatHistory;
     chatUpdateArg.startFromMutex = CreateMutex(NULL, FALSE, NULL);
@@ -149,6 +149,7 @@ void openChat(const Contact *contact)
 
     // Process input and send messages
     while (true) {
+        printRequest("Type your message, /quit to quit and /scroll to enter scroll mode");
         readInBuffer(inputBuffer, sizeof(inputBuffer));
         if (strlen(inputBuffer) == 0)
             continue;
@@ -159,7 +160,7 @@ void openChat(const Contact *contact)
         }
         if (strcmp(inputBuffer, "/scroll") == 0) {
             while (true) {
-                printRequest("press u to go up, d to go down, i to enter insert mode");
+                printRequest("press u to go up, d to go down, i to write message");
                 ch = readChar(false);
                 if (ch == 'u') {
                     if (contact->chatHistory.messages - chatUpdateArg.startFrom <= getMainAreaHeight()) {
@@ -191,65 +192,18 @@ void openChat(const Contact *contact)
     }
 }
 
-void sendMessage(const SOCKET socket, const Contact *contact, const char *message)
+void sendMessage(SOCKET serverSocket, const Contact *contact, const char *message)
 {
     DBG_FUNC();
-    PendingRequest  *request = NULL;
-    int             try, respond;
-    Packet          pIn, pOut;
+    SendMessageThreadArg *arg = malloc(sizeof(*arg));
+    Message *newMessage = addMessage(contact, message, true, MESSAGE_SEND_PENDING);
+    SetEvent(appData.messageEvent);
 
-    if (contact == NULL) {
-        DBG_ERROR("No contact is selected\n");
-        return;
-    }
+    arg->message = newMessage;
+    arg->contact = contact;
+    arg->socket = serverSocket;
 
-    pIn.data = NULL; pOut.data = NULL;
-
-    for (try = 0; try < 3; try++) {
-        deleteRequest(&request);
-        deletePacket(pIn); deletePacket(pOut);
-        request = createRequest();
-        if (request == NULL) {
-            DBG_FATAL("Failed to create request\n");
-            printNotification(formatError, "Can't send message");
-            return;
-        }
-
-        pOut = createPacket(TYPE_REQUEST, COMMAND_MESSAGE, 0, request->id);
-        addPacketString(&pOut, contact->nickname);
-        addPacketString(&pOut, message);
-        sendPacket(socket, pOut, &socketServerMutex);
-
-        WaitForSingleObject(request->event, INFINITE);
-        WaitForSingleObject(request->mutex, INFINITE);
-
-        pIn = packetFromBytes(request->data);
-        deleteRequest(&request);
-        if (pIn.data == NULL) {
-            DBG_ERROR("Can't create packet from respond\n");
-            continue;
-        }
-        break;
-    }
-    respond = pIn.status; // FIXME handle if loop terminated without proper respond
-
-    switch (respond) {
-    case STATUS_OK:
-        DBG_INFO("Message sent\n");
-        addMessage(contact, message, true);
-        break;
-    case STATUS_FAILURE:
-        DBG_ERROR("Message sending failed\n");
-        printNotification(formatError, "Can't send message");
-        break;
-    case STATUS_NOT_FOUND:
-        DBG_ERROR("Server did not find contact\n");
-        printNotification(formatError, "Contact is not logined");
-    default:
-        printStatusErrorMessage(respond);
-    }
-    deleteRequest(&request);
-    deletePacket(pIn); deletePacket(pOut);
+    _beginthread(sendMessageThread, 0, arg);
 }
 
 void createChat(SOCKET socket)

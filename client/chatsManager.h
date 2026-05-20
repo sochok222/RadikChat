@@ -9,7 +9,7 @@ extern Contact *currentContact;
 
 void showPrivateChats(void);
 void createChat(SOCKET socket);
-void sendMessage(SOCKET socket, const Contact *contact, const char *message);
+void sendMessage(SOCKET serverSocket, const Contact *contact, const char *message);
 bool logIn(SOCKET socket);
 void deleteChat(const Contact *contact);
 int  updateUnreadMessages(void);

@@ -57,7 +57,7 @@ static void initChatHistory(ChatHistory *chatHistory)
     chatHistory->head = NULL;
 }
 
-void addMessage(Contact *contact, const char *message, bool sender)
+Message *addMessage(Contact *contact, const char *message, bool sender, MessageState state)
 {
     DBG_FUNC();
     Message *it = contact->chatHistory.head;
@@ -70,12 +70,14 @@ void addMessage(Contact *contact, const char *message, bool sender)
     else
         contact->chatHistory.head = newMessage;
 
-    newMessage->message = malloc(strlen(message) + 1);
-    strcpy(newMessage->message, message);
+    newMessage->text = malloc(strlen(message) + 1);
+    strcpy(newMessage->text, message);
     newMessage->next = NULL;
     newMessage->sender = sender;
+    newMessage->state = state;
     contact->chatHistory.messages++;
     SetEvent(appData.messageEvent);
+    return newMessage;
 }
 
 int contactCount()

@@ -5,7 +5,6 @@
 #include "consoleOutput.h"
 #include "contactsManager.h"
 #include "packetManager/packet.h"
-#include "pendingOperation/delivery.h"
 #include "pendingOperation/request.h"
 
 #include <debug.h>
@@ -21,7 +20,6 @@ HANDLE notificationsSemaphore;
 HANDLE notificationThreadRunMutex;
 
 static Packet   handleNewMessage(Packet p);
-static void     deleteNotification(Packet **notification);
 
 void initClientUtils()
 {
@@ -72,8 +70,7 @@ void socketThread(void*)
 
         if (*(int*)(readBuffer + PACKET_TYPE_OFFSET) == TYPE_DELIVERY) {
             Packet notification, respond;
-            DBG_INFO("Received a delivery\n");
-            // addNotification(readBuffer);
+            DBG_INFO("Received a notification\n");
             notification = packetFromBytes(readBuffer);
             respond = handleNewMessage(notification);
             sendPacket(socketServer, respond, &socketServerMutex);
@@ -90,10 +87,10 @@ void socketThread(void*)
         }
 
         WaitForSingleObject(request->mutex, INFINITE);
-        // moving received packet to destination
+        // move received packet to the destination
         writeToRequest(request, readBuffer, received);
 
-        // clearing buffer
+        // clear buffer
         // TODO handle too large PACKET_SIZE
         clear:
         received -= *(int*)(readBuffer + PACKET_SIZE_OFFSET);
@@ -104,45 +101,78 @@ void socketThread(void*)
     _endthread();
 }
 
-static void deleteNotification(Packet **notification)
+void sendMessageThread(void *args)
 {
-    if (notification == NULL || *notification == NULL)
+    DBG_FUNC();
+    Message         *message = ((SendMessageThreadArg*)args)->message;
+    Contact         *contact = ((SendMessageThreadArg*)args)->contact;
+    SOCKET          serverSocket = ((SendMessageThreadArg*)args)->socket;
+    PendingRequest  *request = NULL;
+    int             respond;
+    Packet          pIn = {0}, pOut = {0};
+
+    if (contact == NULL) {
+        DBG_ERROR("Contact is null\n");
+        free(args);
         return;
-    if ((*notification)->data != NULL)
-        free((*notification)->data);
-    free(*notification);
-    *notification = NULL;
-}
-
-void notificationThread(void*)
-{
-    Packet *notification;
-    Packet respond;
-
-    SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
-    SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
-
-    while (true) {
-        WaitForSingleObject(notificationsSemaphore, INFINITE);
-        for (int i = 0; i < MAX_NOTIFICATIONS; i++) {
-            if ((notification = notifications[i]) != NULL) {
-                switch (notification->command) {
-                case COMMAND_MESSAGE:
-                    respond = handleNewMessage(*notification);
-                    sendPacket(socketServer, respond, &socketServerMutex);
-                    if (respond.status == STATUS_OK)
-                        printNotification(formatDefault, "Received a new notification\n");
-                    deletePacket(respond);
-                    break;
-                default:
-                    break;
-                }
-                deleteNotification(&notifications[i]);
-            }
-        }
-        ReleaseMutex(notificationsSemaphore);
     }
-    _endthread();
+    if (message == NULL) {
+        DBG_ERROR("Message is null\n")
+        free(args);
+        return;
+    }
+
+    deleteRequest(&request);
+    deletePacket(pIn); deletePacket(pOut);
+    request = createRequest();
+    if (request == NULL) {
+        DBG_FATAL("Failed to create request\n");
+        printNotification(formatError, "Can't send message");
+        free(args);
+        return;
+    }
+    pOut = createPacket(TYPE_REQUEST, COMMAND_MESSAGE, 0, request->id);
+    addPacketString(&pOut, contact->nickname);
+    addPacketString(&pOut, message->text);
+    sendPacket(serverSocket, pOut, &socketServerMutex);
+
+    WaitForSingleObject(request->event, INFINITE);
+    WaitForSingleObject(request->mutex, INFINITE);
+
+    pIn = packetFromBytes(request->data);
+    deleteRequest(&request);
+    if (pIn.data == NULL) {
+        DBG_ERROR("Can't create packet from respond\n");
+        free(args);
+        return;
+    }
+
+    respond = pIn.status;
+
+    switch (respond) {
+    case STATUS_OK:
+        DBG_INFO("Message sent\n");
+        message->state = MESSAGE_SEND_SUCCESS;
+        break;
+    case STATUS_FAILURE:
+        DBG_ERROR("Message sending failed\n");
+        printNotification(formatError, "Can't send message");
+        message->state = MESSAGE_SEND_FAILED;
+        break;
+    case STATUS_NOT_FOUND:
+        DBG_ERROR("Server did not find contact\n");
+        message->state = MESSAGE_SEND_FAILED;
+        printNotification(formatError, "Contact is not logined");
+        break;
+    default:
+        printStatusErrorMessage(respond);
+        message->state = MESSAGE_SEND_FAILED;
+    }
+
+    SetEvent(appData.messageEvent);
+    deleteRequest(&request);
+    deletePacket(pIn); deletePacket(pOut);
+    free(args);
 }
 
 static Packet handleNewMessage(Packet messagePacket)
@@ -173,7 +203,7 @@ static Packet handleNewMessage(Packet messagePacket)
         return respond;
     }
 
-    addMessage(contact, receivedMessage, false);
+    addMessage(contact, receivedMessage, false, MESSAGE_SEND_SUCCESS);
     respond.status = STATUS_OK;
 
     return respond;

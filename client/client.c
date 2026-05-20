@@ -77,8 +77,6 @@ reconnect:
         goto reconnect;
     }
     socketThreadMutex = (HANDLE)_beginthread(socketThread, 0, NULL);
-    // TODO add handle for run mutex
-    _beginthread(notificationThread, 0, NULL);
 
     if (!logIn(socketServer)) {
         printError("Can't login\n");
