@@ -121,6 +121,7 @@ void clearScreen(void)
 void printChatHistory(ChatHistory history, int startFrom)
 {
     int i = 0;
+    WaitForSingleObject(consoleOutMutex, INFINITE);
     if (startFrom <= 0 && startFrom > history.messages)
         return;
 
@@ -139,9 +140,24 @@ void printChatHistory(ChatHistory history, int startFrom)
 
     // Print messages
     for (i = mainAreaStart + 2; history.head != NULL && i < mainAreaEnd; i++) {
-        writeToConsoleBuffer(history.head->text, strlen(history.head->text), i, 0, false);
+        int spacing = 0;
+        writeToConsoleBuffer(history.head->sender == true ? "You:" : "Contact:",
+            history.head->sender ? strlen("You:") : strlen("Contact:"), i, spacing, false);
+        spacing += history.head->sender ? strlen("You:") : strlen("Contact:") + 2;
+        writeToConsoleBuffer(history.head->text, strlen(history.head->text), i,
+            spacing, false);
+        spacing += strlen(history.head->text) + 1;
+
+        if (history.head->state == MESSAGE_SEND_PENDING)
+            writeToConsoleBuffer("(+)", strlen("(+)"), i, spacing, false);
+        else if (history.head->state == MESSAGE_SEND_SUCCESS)
+            writeToConsoleBuffer("(++)", strlen("(++)"), i, spacing, false);
+        else
+            writeToConsoleBuffer("(not sent)", strlen("(not sent)"), i, spacing, false);
+
         history.head = history.head->next;
     }
+    ReleaseMutex(consoleOutMutex);
     redrawConsole();
 }
 

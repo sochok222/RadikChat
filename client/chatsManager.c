@@ -195,7 +195,7 @@ void openChat(const Contact *contact)
 void sendMessage(SOCKET serverSocket, const Contact *contact, const char *message)
 {
     DBG_FUNC();
-    SendMessageThreadArg *arg = malloc(sizeof(*arg));
+    SendMessageThreadArg *arg = malloc(sizeof(*arg)); // Freed in sendMessageThread
     Message *newMessage = addMessage(contact, message, true, MESSAGE_SEND_PENDING);
     SetEvent(appData.messageEvent);
 

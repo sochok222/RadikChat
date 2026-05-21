@@ -11,7 +11,7 @@ typedef enum
 typedef struct sMessage
 {
     bool            sender; // true - 'our' false - 'their'
-    bool            state;
+    MessageState    state;
     char            *text;
     struct sMessage *next;
 } Message;
