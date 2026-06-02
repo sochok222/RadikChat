@@ -53,18 +53,21 @@ Packet packetFromBytes(uint8_t *data)
 
     p.parseError = PARSE_ERROR_NONE;
 
-    if (p.size - PACKET_HEADER_SIZE <= PACKET_MAX_CAPACITY) {
-        if (p.size - PACKET_HEADER_SIZE > 0)
-            p.data = malloc(p.size);
-        else {
-            p.parseError = PARSE_ERROR_WRONG_SIZE;
-            return p;
+    if (p.size < PACKET_HEADER_SIZE) {
+        p.parseError = PARSE_ERROR_WRONG_SIZE;
+        return p;
+    }
+
+    size_t payloadSize = p.size - PACKET_HEADER_SIZE;
+    if (payloadSize <= PACKET_MAX_CAPACITY) {
+        if (payloadSize > 0) {
+            p.data = malloc(payloadSize);
+            if (p.data == NULL) {
+                DBG_ERROR("Cant allocate memory for packet data\n");
+                p.parseError = PARSE_ERROR_MALLOC_FAILED;
+            } else
+                memcpy(p.data, data + PACKET_HEADER_SIZE, payloadSize);
         }
-        if (p.data == NULL) {
-            DBG_ERROR("Cant allocate memory for packet data\n");
-            p.parseError = PARSE_ERROR_MALLOC_FAILED;
-        } else
-            memcpy(p.data, data + PACKET_HEADER_SIZE, p.size - PACKET_HEADER_SIZE);
     } else
         p.parseError = PARSE_ERROR_WRONG_SIZE;
 

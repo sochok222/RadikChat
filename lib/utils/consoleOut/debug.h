@@ -12,6 +12,8 @@
 #ifndef NO_DEBUG_BUILD
 #include <time.h>
 
+// TODO add logging mutex
+
 #if DEBUG_LEVEL >= 5
 #define DBG_DEBUG(...)\
     log_message(DBG_MODE_DEBUG, TEXT("[TRACE]: %s(): "), __FUNCTION__, __LINE__);\

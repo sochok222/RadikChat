@@ -11,8 +11,7 @@ void processLoginPacket(ClientInfo *client)
     int         requestId;
     char        *nickname;
     size_t      readPos = 0;
-    Packet      in, out;
-    in.data = NULL; out.data = NULL;
+    Packet      in = {0}, out = {0};
 
     in = packetFromBytes(client->buffer);
     if (in.data == NULL)
@@ -28,7 +27,7 @@ void processLoginPacket(ClientInfo *client)
     }
 
     // Search if client with same nickname is registered
-    it = clients;
+    it = g_clients;
     while (it != NULL) {
         if (strcmp(it->nickname, nickname) == 0) {
             DBG_INFO("Found same nickname\n");
@@ -41,7 +40,7 @@ void processLoginPacket(ClientInfo *client)
 
     // Save nickname to client
     strcpy(client->nickname, nickname);
-    client->isLogined = true;
+    client->isLoggedIn = true;
 
 sendPacket:
     sendPacket(client->socket, out, NULL);
@@ -85,7 +84,7 @@ void processCreateChatPacket(ClientInfo *client)
     }
 
     // Search for if needed client is registered
-    it = clients;
+    it = g_clients;
     while (it != NULL) {
         if (strcmp(it->nickname, nickname) == 0) {
             DBG_INFO("Found needed client\n");
@@ -142,7 +141,7 @@ void processMessagePacket(ClientInfo *client)
     }
 
     // Search for if needed client is registered
-    it = clients;
+    it = g_clients;
     while (it != NULL) {
         if (strcmp(it->nickname, nickname) == 0) {
             DBG_INFO("Found needed client\n");

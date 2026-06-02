@@ -9,8 +9,8 @@
 #define MAX_RETRIES 10
 
 #define PACKET_HEADER_SIZE (sizeof(((Packet*)(0))->size) + sizeof(((Packet*)(0))->type) + \
-                            sizeof(((Packet*)(0))->command) + sizeof(((Packet*)(0))->status)) + \
-                            sizeof(((Packet*)(0))->id)
+                            sizeof(((Packet*)(0))->command) + sizeof(((Packet*)(0))->status) + \
+                            sizeof(((Packet*)(0))->id))
 
 #define PACKET_SIZE_OFFSET (0)
 #define PACKET_TYPE_OFFSET (sizeof(((Packet*)(0))->size))

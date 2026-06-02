@@ -41,8 +41,10 @@ void writeToRequest(PendingRequest *request, uint8_t *data, size_t size)
 {
     if (request->capacity < request->size + size) {
         request->data = realloc(request->data, request->size + size);
+        request->capacity = request->size + size;
     }
     memcpy(request->data + request->size, data, size);
+    request->size += size;
 }
 
 void deleteRequest(PendingRequest **request)

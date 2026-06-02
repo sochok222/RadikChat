@@ -13,7 +13,7 @@
 
 #define MAX_READ_BUFFER_SIZE 1024
 
-static fd_set fdMaster;
+static fd_set fdClients;
 
 HANDLE socketServerMutex;
 HANDLE notificationsSemaphore;
@@ -24,16 +24,16 @@ static Packet   handleNewMessage(Packet p);
 void initClientUtils()
 {
     notificationThreadRunMutex = CreateMutex(NULL, FALSE, NULL);
-    FD_ZERO(&fdMaster);
+    FD_ZERO(&fdClients);
 }
 
 fd_set  waitForSeverRespond(SOCKET server, struct timeval *timeout)
 {
     fd_set fdReads;
-    if (!FD_ISSET(server, &fdMaster))
-        FD_SET(server, &fdMaster);
+    if (!FD_ISSET(server, &fdClients))
+        FD_SET(server, &fdClients);
 
-    fdReads = fdMaster;
+    fdReads = fdClients;
 
     if (select(0, &fdReads, 0, 0, timeout) < 0) {
         DBG_FATAL("select() failed.\n");
@@ -77,7 +77,10 @@ void socketThread(void*)
             deletePacket(notification);
             deletePacket(respond);
 
-            goto clear;
+            int packetSize = *(int*)(readBuffer + PACKET_SIZE_OFFSET);
+            received -= packetSize;
+            memcpy(readBuffer, readBuffer + packetSize, received);
+            continue;
         }
 
         if ((request = pendingRequests[*(int*)(readBuffer + PACKET_ID_OFFSET)]) == NULL) {
@@ -88,13 +91,13 @@ void socketThread(void*)
 
         WaitForSingleObject(request->mutex, INFINITE);
         // move received packet to the destination
-        writeToRequest(request, readBuffer, received);
+        writeToRequest(request, readBuffer, *(int*)(readBuffer + PACKET_SIZE_OFFSET));
 
         // clear buffer
         // TODO handle too large PACKET_SIZE
-        clear:
-        received -= *(int*)(readBuffer + PACKET_SIZE_OFFSET);
-        memcpy(readBuffer, readBuffer + *(int*)(readBuffer + PACKET_SIZE_OFFSET), *(int*)(readBuffer + PACKET_SIZE_OFFSET));
+        int packetSize = *(int*)(readBuffer + PACKET_SIZE_OFFSET);
+        received -= packetSize;
+        memcpy(readBuffer, readBuffer + packetSize, received);
         SetEvent(request->event);
         ReleaseMutex(request->mutex);
     }
@@ -170,7 +173,6 @@ void sendMessageThread(void *args)
     }
 
     SetEvent(appData.messageEvent);
-    deleteRequest(&request);
     deletePacket(pIn); deletePacket(pOut);
     free(args);
 }
