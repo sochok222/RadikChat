@@ -20,7 +20,7 @@ typedef struct sClientInfo
     struct sClientInfo* next;
 } ClientInfo;
 
-extern ClientInfo* g_clients;
+extern ClientInfo* g_ciClients;
 
 void initServerUtils();
 

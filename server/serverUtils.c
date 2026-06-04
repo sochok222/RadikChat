@@ -8,7 +8,7 @@
 #define MAX_PENDING_DELIVERIES 100
 #define MAX_CLIENT_BUFFER_SIZE 1024
 
-ClientInfo *g_clients = NULL;
+ClientInfo *g_ciClients = NULL;
 static fd_set fdClients;
 static HANDLE fdClientsMutex;
 
@@ -28,7 +28,7 @@ void addClientToSet(ClientInfo *client)
 ClientInfo* getClient(SOCKET s)
 {
     DBG_FUNC();
-    ClientInfo *it = g_clients;
+    ClientInfo *it = g_ciClients;
 
     while (it != NULL) {
         if (it->socket == s)
@@ -44,8 +44,8 @@ ClientInfo* getClient(SOCKET s)
     newClient->isLoggedIn = false;
 
     newClient->addressSize = sizeof(newClient->address);
-    newClient->next = g_clients;
-    g_clients = newClient;
+    newClient->next = g_ciClients;
+    g_ciClients = newClient;
 
     return newClient;
 }
@@ -57,7 +57,7 @@ void deleteClient(ClientInfo *client)
     WaitForSingleObject(fdClientsMutex, INFINITE);
     FD_CLR(client->socket, &fdClients);
     ReleaseMutex(fdClientsMutex);
-    ClientInfo **p = &g_clients;
+    ClientInfo **p = &g_ciClients;
     while(*p) {
         if (*p == client) {
             *p = client->next;

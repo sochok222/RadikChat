@@ -27,7 +27,7 @@ void processLoginPacket(ClientInfo *client)
     }
 
     // Search if client with same nickname is registered
-    it = g_clients;
+    it = g_ciClients;
     while (it != NULL) {
         if (strcmp(it->nickname, nickname) == 0) {
             DBG_INFO("Found same nickname\n");
@@ -84,7 +84,7 @@ void processCreateChatPacket(ClientInfo *client)
     }
 
     // Search for if needed client is registered
-    it = g_clients;
+    it = g_ciClients;
     while (it != NULL) {
         if (strcmp(it->nickname, nickname) == 0) {
             DBG_INFO("Found needed client\n");
@@ -141,7 +141,7 @@ void processMessagePacket(ClientInfo *client)
     }
 
     // Search for if needed client is registered
-    it = g_clients;
+    it = g_ciClients;
     while (it != NULL) {
         if (strcmp(it->nickname, nickname) == 0) {
             DBG_INFO("Found needed client\n");

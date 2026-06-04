@@ -180,7 +180,7 @@ char *readPacketString(Packet *p, size_t *pos)
     result = (char*)(p->data + *pos + PACKET_FIELD_CONTENT_OFFSET);
 
     if (*(result + typeSize - 1) != '\0') {
-        DBG_ERROR("String field in not null-terminated\n")
+        DBG_ERROR("String field in not null-terminated\n");
         return NULL;
     }
     *pos += PACKET_FIELD_HEADER_SIZE + typeSize;
@@ -194,7 +194,7 @@ int *readPacketInt(Packet *p, size_t *pos)
     int *result;
     // Check if can read header
     if (p->size < *pos + PACKET_FIELD_HEADER_SIZE) {
-        DBG_ERROR("Field does not contain enough space for size\n")
+        DBG_ERROR("Field does not contain enough space for size\n");
         return NULL;
     }
 

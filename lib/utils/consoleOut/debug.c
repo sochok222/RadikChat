@@ -16,11 +16,13 @@
 
 PRIVATE FILE *fOut, *mStdout, *mStderr;
 PRIVATE bool toConsole;
+PRIVATE HANDLE hOut;
 
 bool initDebug(const char *logFile)
 {
     fOut = NULL;
     toConsole = logFile == NULL;
+    hOut = GetStdHandle(STD_OUTPUT_HANDLE);
 
     if (logFile != NULL) {
         if ((fOut = fopen(logFile, "a")) == NULL) {
@@ -95,6 +97,7 @@ void logWinError(unsigned long error_code)
 /* Log message with color corresponding to level */
 void logMessage(int mode, const char *format, ...)
 {
+    char buffer[256] = {0};
 	va_list args;
 	FILE *out;
 
@@ -120,10 +123,14 @@ void logMessage(int mode, const char *format, ...)
 			break;
 	}
 	/* Printing args */
+    // TODO Replace vfprintf with WriteConsole()
+    // Because call on printf from multiple thread can cause av.
+    // WriteConsole is buffered
 	va_start(args, format);
-        vfprintf(out, format, args);
+        vsprintf(buffer, format, args);
 	va_end(args);
-    fflush(out);
+    WriteConsoleA(hOut, buffer, strlen(buffer), NULL, NULL);
+    // fflush(out);
 
     setTextColor(formatDefault);
 }

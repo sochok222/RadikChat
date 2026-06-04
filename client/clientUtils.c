@@ -120,7 +120,7 @@ void sendMessageThread(void *args)
         return;
     }
     if (message == NULL) {
-        DBG_ERROR("Message is null\n")
+        DBG_ERROR("Message is null\n");
         free(args);
         return;
     }
