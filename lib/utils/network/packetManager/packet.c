@@ -125,6 +125,48 @@ void sendPacket(SOCKET socket, Packet packet, HANDLE *socketMutex)
         ReleaseMutex(*socketMutex);
 }
 
+void packPacket(SOCKET socket, Packet packet, HANDLE *socketMutex)
+{
+    size_t offset = 0;
+    if (socketMutex != NULL)
+        WaitForSingleObject(*socketMutex, INFINITE);
+
+    // Packing data to packet's buffer
+    packet.size = PACKET_HEADER_SIZE;
+    memcpy(packet.data + offset, &packet.size, sizeof(packet.size)); offset += sizeof(packet.size);
+    memcpy(packet.data + offset, &packet.type, sizeof(packet.type)); offset += sizeof(packet.type);
+    memcpy(packet.data + offset, &packet.command, sizeof(packet.command)); offset += sizeof(packet.command);
+    memcpy(packet.data + offset, &packet.status, sizeof(packet.status)); offset += sizeof(packet.status);
+    memcpy(packet.data + offset, &packet.id, sizeof(packet.id));
+
+    // while (totalSend < PACKET_HEADER_SIZE) {
+    //     int sent = send(socket, header + totalSend, PACKET_HEADER_SIZE - totalSend, 0);
+    //     if (sent <= 0) {
+    //         DBG_FATAL("Can't send packet to the server\n");
+    //         printNotification(formatError, "can't send packet to the server");
+    //         exit(1);
+    //     }
+    //     totalSend += sent;
+    // }
+    //
+    // packet.size -= PACKET_HEADER_SIZE;
+    //
+    // totalSend = 0;
+    // while (totalSend < packet.size) {
+    //     int maxSend = packet.size - totalSend > INT_MAX ? INT_MAX : (int)(packet.size - totalSend);
+    //     int sent = send(socket, (char*)packet.data + totalSend, maxSend, 0);
+    //     if (sent <= 0) {
+    //         DBG_FATAL("Can't send packet to the server\n");
+    //         printNotification(formatError, "can't send packet to the server");
+    //         exit(1);
+    //     }
+    //     totalSend += sent;
+    // }
+
+    if (socketMutex != NULL)
+        ReleaseMutex(*socketMutex);
+}
+
 void appendToPacket(Packet *p, const void *buff, size_t len)
 {
     const char *buffer = (char*)buff;

@@ -37,9 +37,6 @@ int _cdecl main(int argc, char **argv)
     DWORD flags = 0;
     int nRet = 0;
 
-    g_clients = NULL;
-    g_shutDown = false;
-
     DBG_DEBUG("Initializing winsock...\n");
     if (WSAStartup(MAKEWORD(2, 2), &wsadata) != 0) {
         fprintf(stderr, "Error: Failed to initialize winsock\n");
@@ -128,7 +125,8 @@ DWORD WINAPI workerThread(LPVOID arg)
                                             INFINITE);
 
         if (!success) {
-            DBG_ERROR("GetQueuedCompletionStatus() failed: %d\n", GetLastError());
+            // Not always mean error
+            DBG_INFO("GetQueuedCompletionStatus() failed: %d\n", GetLastError());
         }
 
         if (perSocketContext == NULL) {
@@ -147,13 +145,75 @@ DWORD WINAPI workerThread(LPVOID arg)
         switch (perIOContext->IOOperation) {
         case IO_OP_READ:
             // A read operation has completed, process received packet and post another action on the socket
-            DBG_INFO("Received %d bytes\n", IOSize);
-            fwrite(perIOContext->buffer, 1, IOSize, stdout);
+            DBG_INFO("Thread(%lu) received %d bytes\n", GetCurrentThreadId(), IOSize);
+            perIOContext->wsabuf.buf += IOSize;
+            perIOContext->wsabuf.len -= IOSize;
+            if (IOSize >= PACKET_HEADER_SIZE && IOSize >= *(size_t*)(perIOContext + PACKET_SIZE_OFFSET)) {
+                Packet packetReceived = packetFromBytes(perIOContext->buffer);
+                if (packetReceived.command == COMMAND_LOGIN) {
+                    DBG_INFO("Thread(%lu) received login packet\n", GetCurrentThreadId());
+                    PerIOContext *sendIOContext = allocateIOContext();
+
+                    Packet packetRespond = createPacket(TYPE_RESPOND, COMMAND_LOGIN, STATUS_OK, packetReceived.id);
+                    packPacket(perSocketContext->Socket, packetRespond, NULL);
+
+                    // Fill IO context with needed data to process packed send
+                    sendIOContext->IOOperation = IO_OP_WRITE;
+                    sendIOContext->totalBytes = PACKET_HEADER_SIZE;
+                    sendIOContext->sentBytes = 0;
+                    sendIOContext->wsabuf.buf = sendIOContext->buffer;
+                    sendIOContext->wsabuf.len = PACKET_HEADER_SIZE;
+
+                    memcpy(sendIOContext->buffer, packetRespond.data, PACKET_HEADER_SIZE);
+
+                    nRet = WSASend(perSocketContext->Socket, &(sendIOContext->wsabuf), 1, &sendNumBytes, flags, &sendIOContext->overlapped, NULL);
+
+                    if (nRet == SOCKET_ERROR && ERROR_IO_PENDING != WSAGetLastError()) {
+                        DBG_ERROR("Thread(%lu) WSASend failed error(%d)\n", GetCurrentThreadId(), WSAGetLastError());
+                        closeClient(perSocketContext, false);
+                        deleteIOContext(sendIOContext);
+                    }
+                } else {
+                    DBG_INFO("Thread(%lu) unknown packet received packet\n", GetCurrentThreadId());
+                }
+            }
+
+            // Post receive
+            WSARecv(perSocketContext->Socket, &(perSocketContext->pIOContext->wsabuf),
+                       1, &recvNumBytes, &flags,
+                       &(perSocketContext->pIOContext->overlapped), NULL);
+            break;
         case IO_OP_WRITE:
-            DBG_INFO("Sent %d bytes\n", IOSize);
+            DBG_INFO("Thread(%lu) sent %d bytes\n", GetCurrentThreadId(), IOSize);
+            perIOContext->IOOperation = IO_OP_WRITE;
+            perIOContext->sentBytes += IOSize;
+            flags = 0;
+
+            if (perIOContext->sentBytes < perIOContext->totalBytes) {
+                // Previous IO operation sent not all bytes, post another WSASend
+                buffSend.buf = perIOContext->buffer + perIOContext->sentBytes;
+                buffSend.len = perIOContext->totalBytes - perIOContext->sentBytes;
+
+                nRet = WSASend(perSocketContext->Socket, &buffSend, 1,
+                               &sendNumBytes, flags, &perIOContext->overlapped, NULL);
+                if (nRet == SOCKET_ERROR && ERROR_IO_PENDING != WSAGetLastError()) {
+                    DBG_ERROR("Thread(%lu) WSASend failed\n", GetCurrentThreadId(), WSAGetLastError());
+                    closeClient(perSocketContext, false);
+                    deleteIOContext(perIOContext);
+                } else {
+                    DBG_DEBUG("Thread(&lu) WSASend partially completed (%d bytes), WSASend posted\n", GetCurrentThreadId(), IOSize);
+                }
+            } else {
+                // Previous write operation completed
+                DBG_INFO("Thread(%lu) sent all respond\n", GetCurrentThreadId(), IOSize);
+                deleteIOContext(perIOContext);
+            }
+            break;
         default: break;
         }
     }
+
+    return 0;
 }
 
 PerSocketContext *updateCompletionPort(SOCKET socket, IO_Operation clientIO, bool addToList)
@@ -217,6 +277,8 @@ PerSocketContext *allocateSocketContext(SOCKET socket, IO_Operation clientIO)
     } else {
         DBG_FATAL("malloc PerSocketContext failed");
     }
+
+    InitializeCriticalSection(&perSocketContext->IOCriticalSection);
 
     LeaveCriticalSection(&g_criticalSection);
 
@@ -303,9 +365,9 @@ void deleteFromSocketContextList(PerSocketContext *perSocketContext)
         }
 
         // Free all IO context structs per socket
-        tempIO = (PerIOContext*)(perSocketContext->pIOContext);
+        tempIO = perSocketContext->pIOContext;
         do {
-            nextIO = (PerIOContext*)(tempIO->IOContextForward);
+            nextIO = tempIO->IOContextForward;
             if (tempIO) {
                 // Overlapped structure is safe to delete only when
                 // posted IO has completed. This only need to be tested only
@@ -324,4 +386,19 @@ void deleteFromSocketContextList(PerSocketContext *perSocketContext)
     }
 
     LeaveCriticalSection(&g_criticalSection);
+}
+
+void deleteIOContext(PerIOContext *perIOContext)
+{
+     if (g_shutDown)
+         while (!HasOverlappedIoCompleted((LPOVERLAPPED)&perIOContext)) Sleep(0);
+     free(perIOContext);
+}
+
+PerIOContext *allocateIOContext()
+{
+    PerIOContext *perSocketContext = NULL;
+    perSocketContext = malloc(sizeof(*perSocketContext));
+    ZeroMemory(perSocketContext, sizeof(*perSocketContext));
+    return perSocketContext;
 }

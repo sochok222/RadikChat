@@ -17,7 +17,7 @@ typedef struct sPerIOContext
     char            buffer[MAX_BUFFER_SIZE];
     WSABUF          wsabuf;
     int             totalBytes;
-    int             sentBytes;
+    DWORD           sentBytes;
     IO_Operation    IOOperation;
     SOCKET          socketAccept;
 
@@ -27,9 +27,10 @@ typedef struct sPerIOContext
 typedef struct sPerSocketContext {
     SOCKET                    Socket;
 
-    PerIOContext*             pIOContext;
-    struct sPerSocketContext  *pCtxtBack;
-    struct sPerSocketContext  *pCtxtForward;
+    PerIOContext                *pIOContext;
+    CRITICAL_SECTION            IOCriticalSection;
+    struct sPerSocketContext    *pCtxtBack;
+    struct sPerSocketContext    *pCtxtForward;
 } PerSocketContext;
 
 DWORD WINAPI        workerThread(LPVOID arg);
@@ -37,8 +38,10 @@ DWORD WINAPI        workerThread(LPVOID arg);
 PerSocketContext    *updateCompletionPort(SOCKET s, IO_Operation clientIO, bool addToList);
 void                closeClient(PerSocketContext *perSocketContext, bool graceful);
 PerSocketContext    *allocateSocketContext(SOCKET s, IO_Operation clientIO);
+PerIOContext        *allocateIOContext();
 void                freeSocketContextList();
 void                addToSocketContextList(PerSocketContext *perSocketContext);
 void                deleteFromSocketContextList(PerSocketContext *perSocketContext);
+void                deleteIOContext(PerIOContext *perIOContext);
 
 #endif //RADIKCHAT_SERVER_H

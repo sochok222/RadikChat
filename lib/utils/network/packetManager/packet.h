@@ -82,6 +82,7 @@ Packet  createPacket(PacketType type, PacketCommand command, PacketStatus status
 Packet  packetFromBytes(uint8_t *data);
 void    deletePacket(Packet packet);
 void    sendPacket(SOCKET socket, Packet packet, HANDLE *socketMutex);
+void    packPacket(SOCKET socket, Packet packet, HANDLE *socketMutex);
 
 // WARNING do not free memory returned from this functions
 int     *readPacketInt(Packet *p, size_t *pos);
