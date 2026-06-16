@@ -4,17 +4,17 @@
 #define PENDING_REQUEST_BUFFER_SIZE 100
 #define MAX_PENDING_REQUESTS_BUFFER_SIZE 1024
 
-PendingRequest  *pendingRequests[MAX_PENDING_REQUESTS] = { 0 };
-Packet          *notifications[MAX_NOTIFICATIONS] = { 0 };
+Request  *requestsSlots[MAX_PENDING_REQUESTS] = { 0 };
+TLPacket          *notifications[MAX_NOTIFICATIONS] = { 0 };
 
-PendingRequest *createRequest(void)
+Request *createRequest(void)
 {
-    PendingRequest *request = NULL;
+    Request *request = NULL;
 
     for (int i = 0; i < MAX_PENDING_REQUESTS; i++) {
-        if (pendingRequests[i] == NULL) {
-            pendingRequests[i] = malloc(sizeof(*request));
-            request = pendingRequests[i];
+        if (requestsSlots[i] == NULL) {
+            requestsSlots[i] = malloc(sizeof(*request));
+            request = requestsSlots[i];
             if (request == NULL) {
                 DBG_FATAL("malloc failed");
                 break;
@@ -37,7 +37,7 @@ PendingRequest *createRequest(void)
     return request;
 }
 
-void writeToRequest(PendingRequest *request, uint8_t *data, size_t size)
+void writeToRequest(Request *request, uint8_t *data, size_t size)
 {
     if (request->capacity < request->size + size) {
         request->data = realloc(request->data, request->size + size);
@@ -47,11 +47,11 @@ void writeToRequest(PendingRequest *request, uint8_t *data, size_t size)
     request->size += size;
 }
 
-void deleteRequest(PendingRequest **request)
+void deleteRequest(Request **request)
 {
     if (*request == NULL)
         return;
-    pendingRequests[(*request)->id] = NULL;
+    requestsSlots[(*request)->id] = NULL;
     if ((*request)->data != NULL)
         free((*request)->data);
     free(*request);

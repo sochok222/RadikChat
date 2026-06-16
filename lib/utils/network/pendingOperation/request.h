@@ -1,7 +1,7 @@
 #ifndef RADIKCHAT_REQUESTMANAGER_H
 #define RADIKCHAT_REQUESTMANAGER_H
 
-#include <packetManager/packet.h>
+#include <packet/tlPacket.h>
 #include <stdint.h>
 #include <windows.h>
 
@@ -15,17 +15,22 @@ typedef struct sPendingRequest
     HANDLE mutex;
     HANDLE event;
 
-    size_t  size;
-    size_t  capacity;
-    uint8_t *data;
-} PendingRequest;
+    TLPacket *packet;
+} Request;
+
+typedef struct sRequestSlot
+{
+    Request *request;
+    uint64_t timeStamp; // epoch time when request was created
+    uint16_t gen;
+} RequestSlot;
 
 
-PendingRequest  *createRequest(void);
-void            deleteRequest(PendingRequest **request);
-void            writeToRequest(PendingRequest *request, uint8_t *data, size_t size);
+Request         *createRequest(void);
+void            deleteRequest(Request **request);
+void            writeToRequest(Request *request, uint8_t *data, size_t size);
 
-extern PendingRequest   *pendingRequests[MAX_PENDING_REQUESTS];
-extern Packet           *notifications[MAX_NOTIFICATIONS];
+extern RequestSlot  requests[MAX_PENDING_REQUESTS];
+extern TLPacket     *notifications[MAX_NOTIFICATIONS];
 
 #endif //RADIKCHAT_REQUESTMANAGER_H
