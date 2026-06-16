@@ -5,14 +5,12 @@ set(${PROJECT_NAME}_src
 		socketUtils.c
 		socketUtils.h
 
-        packetManager/packet.h
-        packetManager/packet.c
+		packet/tlPacket.h
+		packet/tlPacket.c
 
 		pendingOperation/request.c
 		pendingOperation/request.h
 
-		pendingOperation/delivery.c
-		pendingOperation/delivery.h
 )
 
 add_library(${PROJECT_NAME} STATIC ${${PROJECT_NAME}_src})
