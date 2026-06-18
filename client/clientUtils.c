@@ -4,8 +4,8 @@
 #include "client.h"
 #include "consoleOutput.h"
 #include "contactsManager.h"
-#include "packetManager/packet.h"
-#include "pendingOperation/request.h"
+#include "tlPacket.h"
+#include "request.h"
 
 #include <debug.h>
 #include <process.h>

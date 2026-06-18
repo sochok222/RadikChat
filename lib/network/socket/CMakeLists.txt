@@ -4,19 +4,12 @@ project(Network LANGUAGES C)
 set(${PROJECT_NAME}_src
 		socketUtils.c
 		socketUtils.h
-
-		packet/tlPacket.h
-		packet/tlPacket.c
-
-		pendingOperation/request.c
-		pendingOperation/request.h
-
 )
 
 add_library(${PROJECT_NAME} STATIC ${${PROJECT_NAME}_src})
 
 target_include_directories(${PROJECT_NAME} PUBLIC
-	${CMAKE_CURRENT_SOURCE_DIR}
+		.
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE

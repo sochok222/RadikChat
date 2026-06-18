@@ -4,8 +4,7 @@
 #define PENDING_REQUEST_BUFFER_SIZE 100
 #define MAX_PENDING_REQUESTS_BUFFER_SIZE 1024
 
-Request  *requestsSlots[MAX_PENDING_REQUESTS] = { 0 };
-TLPacket          *notifications[MAX_NOTIFICATIONS] = { 0 };
+Request           *requestsSlots[MAX_PENDING_REQUESTS] = { 0 };
 
 Request *createRequest(void)
 {

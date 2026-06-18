@@ -1,7 +1,7 @@
 #include "packet.h"
 #include "debug.h"
 
-PacketParseStatus getPacketLogin(TLPacket *tlPacket, PacketLogin **packetLogin)
+PacketParseStatus tlUnpackLogin(TLPacket *tlPacket, PacketLogin **packetLogin)
 {
     bool newPacket = false;
     PacketLogin *result;
@@ -61,6 +61,14 @@ void loginSetNickname(PacketLogin *packetLogin, char *nickname)
     }
 }
 
+void deletePacketLogin(PacketLogin *packetLogin)
+{
+    deleteTLPacket(packetLogin->childPacket);
+    if (packetLogin->nicknameCapacity > 0)
+        free(packetLogin->nickname);
+    free(packetLogin);
+}
+
 PacketParseStatus tlUnpackCreateChat(TLPacket *tlPacket, PacketCreateChat **packetCreateChat)
 {
     bool newPacket = false;
@@ -108,6 +116,12 @@ void createChatSetReceiverID(PacketCreateChat *packetCreateChat, ReceiverID rece
     packetCreateChat->receiverID = receiverID;
 }
 
+void deletePacketCreateChat(PacketCreateChat *packetCreateChat)
+{
+    deleteTLPacket(packetCreateChat->childPacket);
+    free(packetCreateChat);
+}
+
 PacketParseStatus tlUnpackServerRespond(TLPacket *tlPacket, PacketServerRespond **packetServerRespond)
 {
     bool newPacket = false;
@@ -153,4 +167,10 @@ void tlPackServerRespond(PacketServerRespond *packetServerRespond)
 void serverRespondSetRespond(PacketServerRespond *packetServerRespond, ServerRespond status)
 {
     packetServerRespond->status = status;
+}
+
+void deletePacketServerRespond(PacketServerRespond *packetServerRespond)
+{
+    deleteTLPacket(packetServerRespond->childPacket);
+    free(packetServerRespond);
 }

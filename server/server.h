@@ -16,7 +16,7 @@ typedef struct sPerIOContext
     WSAOVERLAPPED   overlapped;
     char            buffer[MAX_BUFFER_SIZE];
     WSABUF          wsabuf;
-    int             totalBytes;
+    uint32_t        totalBytes;
     DWORD           sentBytes;
     IO_Operation    IOOperation;
     SOCKET          socketAccept;
@@ -25,16 +25,17 @@ typedef struct sPerIOContext
 } PerIOContext;
 
 typedef struct sPerSocketContext {
-    SOCKET                    Socket;
-
+    SOCKET                      Socket;
+    char                        *nickname;
     PerIOContext                *pIOContext;
     CRITICAL_SECTION            IOCriticalSection;
     struct sPerSocketContext    *pCtxtBack;
     struct sPerSocketContext    *pCtxtForward;
 } PerSocketContext;
 
+extern PerSocketContext *g_clients;
+
 DWORD WINAPI        workerThread(LPVOID arg);
-// addToList is false for listening socket as it stored in global variable
 PerSocketContext    *updateCompletionPort(SOCKET s, IO_Operation clientIO, bool addToList);
 void                closeClient(PerSocketContext *perSocketContext, bool graceful);
 PerSocketContext    *allocateSocketContext(SOCKET s, IO_Operation clientIO);

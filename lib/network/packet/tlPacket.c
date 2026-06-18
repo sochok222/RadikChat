@@ -139,7 +139,7 @@ void tlPackData(int fieldType, TLPacket *packet, const void *data)
     packet->size += fieldSize;
 }
 
-static PacketParseStatus readPacketField(int fieldType, TLPacket *packet, uint32_t *readPos, void *out)
+PacketParseStatus readPacketField(int fieldType, TLPacket *packet, uint32_t *readPos, void *out)
 {
     size_t fieldSize;
     if (*readPos == 0) {

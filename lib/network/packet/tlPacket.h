@@ -28,16 +28,18 @@ enum ePacketCommand
 };
 typedef uint32_t PacketCommand;
 
-enum ePacketStatus
+enum eServerRespond
 {
-    STATUS_OK = 0,
-    STATUS_FAILURE,
-    STATUS_CANT_READ,
-    STATUS_NOT_FOUND,
-    STATUS_ALREADY_EXISTS,
-    STATUS_SERVER_ERROR,
-    STATUS_SIZE_TOO_BIG,
-    STATUS_ACTION_TO_HIMSELF, // Client tries to create chat or send message to himself
+    SERV_RESPOND_OK = 0,
+    SERV_RESPOND_FAILURE,
+    SERV_RESPOND_CANT_PARSE,
+    SERV_RESPOND_NOT_FOUND,
+    SERV_RESPOND_ALREADY_EXISTS,
+    SERV_RESPOND_SERVER_ERROR,
+    SERV_RESPOND_SIZE_MISMATCH,
+    SERV_RESPOND_ACTION_TO_HIMSELF, // Client tries to create chat or send message to himself
+    SERV_RESPOND_NICKNAME_TOO_SHORT,
+    SERV_RESPOND_NICKNAME_TOO_LONG,
 };
 typedef uint16_t ServerRespond;
 
@@ -59,6 +61,7 @@ static enum ePacketFieldType
     PKT_F_UINT64,
 } PacketFieldType;
 
+// 32 lower bits - actual id, 32 higher bits - generation
 typedef uint64_t PacketID;
 
 // TODO

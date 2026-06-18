@@ -39,13 +39,16 @@ typedef struct sPacketMessage
 PacketParseStatus tlUnpackLogin(TLPacket *tlPacket, PacketLogin **packetLogin);
 inline void tlPackLogin(PacketLogin *packetLogin);
 void loginSetNickname(PacketLogin *packetLogin, char *nickname);
+inline void deletePacketLogin(PacketLogin *packetLogin);
 
 PacketParseStatus tlUnpackCreateChat(TLPacket *tlPacket, PacketCreateChat **packetCreateChat);
 inline void tlPackCreateChat(PacketCreateChat *packetCreateChat);
 inline void createChatSetReceiverID(PacketCreateChat *packetCreateChat, ReceiverID receiverID);
+inline void deletePacketCreateChat(PacketCreateChat *packetCreateChat);
 
 PacketParseStatus tlUnpackServerRespond(TLPacket *tlPacket, PacketServerRespond **packetServerRespond);
 inline void tlPackServerRespond(PacketServerRespond *packetServerRespond);
 inline void serverRespondSetRespond(PacketServerRespond *packetServerRespond, uint16_t status);
+inline void deletePacketServerRespond(PacketServerRespond *packetServerRespond);
 
 #endif //RADIKCHAT_PACKET_H

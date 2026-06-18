@@ -2,9 +2,11 @@
 #include "server.h"
 
 #include "consoleControl.h"
+#include "packet.h"
 #include "serverUtils.h"
+
 #include <debug.h>
-#include <packetManager/packet.h>
+#include <tlPacket.h>
 #include <process.h>
 #include <socketUtils.h>
 #include <stdio.h>

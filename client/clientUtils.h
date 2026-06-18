@@ -3,7 +3,7 @@
 
 #include "contact.h"
 
-#include <packetManager/packet.h>
+#include <tlPacket.h>
 #include <ws2tcpip.h>
 
 extern SOCKET socketServer;
@@ -26,6 +26,6 @@ fd_set  waitForSeverRespond(SOCKET server, struct timeval *timeout);
 void    socketThread(void*);
 void    sendMessageThread(void *args);
 
-void printStatusErrorMessage(PacketStatus packetStatus);
+void printStatusErrorMessage(ServerRespond packetStatus);
 
 #endif //RADIKCHAT_CLIENTUTILS_H
