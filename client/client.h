@@ -5,10 +5,10 @@
 
 typedef struct sAppData
 {
-    size_t contactCount;
-    HANDLE messageEvent;
+    size_t contact_count;
+    HANDLE message_event;
 } AppData;
 
-extern AppData appData;
+extern AppData app_data;
 
 #endif //RADIKCHAT_CLIENT_H

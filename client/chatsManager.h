@@ -5,14 +5,14 @@
 #include "contact.h"
 
 extern Contact *contacts;
-extern Contact *currentContact;
+extern Contact *current_contact;
 
-void showPrivateChats(void);
-void createChat(SOCKET socket);
-void sendMessage(SOCKET serverSocket, const Contact *contact, const char *message);
-bool logIn(SOCKET socket);
-void deleteChat(const Contact *contact);
-int  updateUnreadMessages(void);
-void openChat(const Contact *contact);
+void show_private_chats(void);
+void create_chat(SOCKET socket);
+void send_message(SOCKET server_socket, const Contact *contact, const char *message);
+bool log_in(SOCKET socket);
+void delete_chat(const Contact *contact);
+int  update_unread_messages(void);
+void open_chat(const Contact *contact);
 
 #endif //RADIKCHAT_CHATSMANAGER_H

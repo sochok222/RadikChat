@@ -11,20 +11,20 @@
 #define PUBLIC
 #define PRIVATE static
 
-HANDLE consoleCursorMutex;
-static int consoleWidth, consoleHeight;
+HANDLE console_cursor_mutex;
+static int console_width, console_height;
 
-bool initConsoleSize(void)
+bool init_console_size(void)
 {
-    if (!getConsoleSize(&consoleWidth, &consoleHeight))
+    if (!get_console_size(&console_width, &console_height))
         return false;
 
-    initInput(consoleWidth, consoleHeight);
-    initOutput(consoleWidth, consoleHeight);
+    init_input(console_width, console_height);
+    init_output(console_width, console_height);
     return true;
 }
 
-bool getConsoleSize(int *width, int *height)
+bool get_console_size(int *width, int *height)
 {
     CONSOLE_SCREEN_BUFFER_INFO csbi;
 
@@ -37,7 +37,7 @@ bool getConsoleSize(int *width, int *height)
     return true;
 }
 
-void setAlternateConsoleBuffer(bool alternate)
+void set_alternate_console_buffer(bool alternate)
 {
     if (alternate == true)
         printf(CSI "?1049h");
@@ -45,7 +45,7 @@ void setAlternateConsoleBuffer(bool alternate)
         printf(CSI "?1049l");
 }
 
-void setPos(int row, int col)
+void set_pos(int row, int col)
 {
     char buffer[35] = CSI;
 
@@ -56,26 +56,26 @@ void setPos(int row, int col)
     printf("%s", buffer);
 }
 
-void lockConsoleSize(bool lock)
+void lock_console_size(bool lock)
 {
-    HWND consoleWindow = GetConsoleWindow();
+    HWND console_window = GetConsoleWindow();
     if (lock == true)
-        SetWindowLong(consoleWindow, GWL_STYLE, GetWindowLong(consoleWindow, GWL_STYLE) & ~WS_MAXIMIZEBOX & ~WS_SIZEBOX);
+        SetWindowLong(console_window, GWL_STYLE, GetWindowLong(console_window, GWL_STYLE) & ~WS_MAXIMIZEBOX & ~WS_SIZEBOX);
     else
-        SetWindowLong(consoleWindow, GWL_STYLE, GetWindowLong(consoleWindow, GWL_STYLE) & WS_MAXIMIZEBOX & WS_SIZEBOX);
+        SetWindowLong(console_window, GWL_STYLE, GetWindowLong(console_window, GWL_STYLE) & WS_MAXIMIZEBOX & WS_SIZEBOX);
 }
 
-int getConsoleWidth(void)
+int get_console_width(void)
 {
-    return consoleWidth;
+    return console_width;
 }
 
-int getConsoleHeight(void)
+int get_console_height(void)
 {
-    return consoleHeight;
+    return console_height;
 }
 
-void clearCurrentLine(int width)
+void clear_current_line(int width)
 {
     char buffer[15] = CSI;
     sprintf(buffer + strlen(buffer), "%d", width + 1);
@@ -83,7 +83,7 @@ void clearCurrentLine(int width)
     printf(buffer);
 }
 
-void setCursorVisibility(bool visible)
+void set_cursor_visibility(bool visible)
 {
    if (visible == true) {
        printf(CSI "?25h");
@@ -92,22 +92,22 @@ void setCursorVisibility(bool visible)
    }
 }
 
-bool enableVirtualProcessing(bool enable)
+bool enable_virtual_processing(bool enable)
 {
-    DWORD consoleMode = 0;
-    HANDLE stdHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+    DWORD console_mode = 0;
+    HANDLE std_handle = GetStdHandle(STD_OUTPUT_HANDLE);
 
-    if (!GetConsoleMode(stdHandle, &consoleMode)) {
+    if (!GetConsoleMode(std_handle, &console_mode)) {
         DBG_ERROR("Can't get console mode");
         return false;
     }
 
     if (enable == true)
-        consoleMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+        console_mode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
     else
-        consoleMode &= ~ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+        console_mode &= ~ENABLE_VIRTUAL_TERMINAL_PROCESSING;
 
-    if (!SetConsoleMode(stdHandle, consoleMode)) {
+    if (!SetConsoleMode(std_handle, console_mode)) {
         DBG_ERROR("Can't set console mode");
         return false;
     }
@@ -115,26 +115,26 @@ bool enableVirtualProcessing(bool enable)
     return true;
 }
 
-bool disableSelection(bool disable)
+bool disable_selection(bool disable)
 {
-    DWORD consoleMode = 0;
-    HANDLE stdHandle = GetStdHandle(STD_INPUT_HANDLE);
+    DWORD console_mode = 0;
+    HANDLE std_handle = GetStdHandle(STD_INPUT_HANDLE);
 
-    if (!GetConsoleMode(stdHandle, &consoleMode)) {
+    if (!GetConsoleMode(std_handle, &console_mode)) {
         DBG_ERROR("Can't get console mode");
         return false;
     }
 
     if (disable == true) {
-        consoleMode |= ENABLE_EXTENDED_FLAGS;
-        consoleMode &= ~ENABLE_QUICK_EDIT_MODE;
+        console_mode |= ENABLE_EXTENDED_FLAGS;
+        console_mode &= ~ENABLE_QUICK_EDIT_MODE;
     }
     else
-        consoleMode &= ENABLE_QUICK_EDIT_MODE | ENABLE_EXTENDED_FLAGS;
+        console_mode &= ENABLE_QUICK_EDIT_MODE | ENABLE_EXTENDED_FLAGS;
 
-    if (!SetConsoleMode(stdHandle, consoleMode)) {
+    if (!SetConsoleMode(std_handle, console_mode)) {
         DBG_ERROR("Can't set console mode");
-        logWinError(GetLastError());
+        log_win_error(GetLastError());
         return false;
     }
 

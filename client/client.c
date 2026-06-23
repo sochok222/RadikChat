@@ -26,39 +26,39 @@
 #define SERVER_ADDRESS "192.168.0.184"
 #define SERVER_PORT "1423"
 
-SOCKET  socketServer = INVALID_SOCKET;
-HANDLE  socketThreadRunMutex;
-AppData appData;
+SOCKET  socket_server = INVALID_SOCKET;
+HANDLE  socket_thread_run_mutex;
+AppData app_data;
 
-static void initConsole(void)
+static void init_console(void)
 {
-    initDebug("logs.log");
-    enableVirtualProcessing(true);
-    setAlternateConsoleBuffer(true);
-    disableSelection(true);
-    hideCursor();
-    initConsoleSize();
+    init_debug("logs.log");
+    enable_virtual_processing(true);
+    set_alternate_console_buffer(true);
+    disable_selection(true);
+    hide_cursor();
+    init_console_size();
 
-    lockConsoleSize(true);
-    _beginthread(consoleDrawThread, 0, 0);
+    lock_console_size(true);
+    _beginthread(console_draw_thread, 0, 0);
 }
 
 int main(void)
 {
     WSADATA wsadata;
     int     choice;
-    HANDLE  socketThreadMutex;
-    appData.contactCount = 0;
-    appData.messageEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
+    HANDLE  socket_thread_mutex;
+    app_data.contact_count = 0;
+    app_data.message_event = CreateEvent(NULL, FALSE, FALSE, NULL);
 
-    socketThreadRunMutex = CreateMutex(NULL, TRUE, NULL);
+    socket_thread_run_mutex = CreateMutex(NULL, TRUE, NULL);
 
-    initConsole();
-    initRequests();
+    init_console();
+    init_requests();
     // Set fixed console size
-    if (getConsoleWidth() < 119 || getConsoleHeight() < 29) {
+    if (get_console_width() < 119 || get_console_height() < 29) {
         printf("Invalid console size %dx%d.\nPlease, resize to 119x29 or larger size and start the program again.\n",
-               getConsoleWidth(), getConsoleHeight());
+               get_console_width(), get_console_height());
         return 0;
     }
 
@@ -68,58 +68,58 @@ int main(void)
     }
 
 reconnect:
-    printNotification(formatDefault, "Trying to connect...");
-    socketServer = createActiveSocket(SERVER_ADDRESS, SERVER_PORT, SOCK_STREAM);
-    if (socketServer == INVALID_SOCKET) {
+    print_notification(formatDefault, "Trying to connect...");
+    socket_server = create_active_socket(SERVER_ADDRESS, SERVER_PORT, SOCK_STREAM);
+    if (socket_server == INVALID_SOCKET) {
         // printf("Error creating socket\n");
-        printNotification(formatError, "Can't connect to the server. Press any button to try again or q to quit");
+        print_notification(formatError, "Can't connect to the server. Press any button to try again or q to quit");
         if (getch() == 'q') {
             system("cls");
             return 0;
         }
         goto reconnect;
     }
-    socketThreadMutex = (HANDLE)_beginthread(socketThread, 0, NULL);
+    socket_thread_mutex = (HANDLE)_beginthread(socket_thread, 0, NULL);
 
-    if (!logIn(socketServer)) {
-        printError("Can't login\n");
-        closesocket(socketServer);
+    if (!log_in(socket_server)) {
+        print_error("Can't login\n");
+        closesocket(socket_server);
         WSACleanup();
         return 1;
     }
     printSuccess("Login success\n");
 
-    socketServerMutex = CreateMutex(NULL, FALSE, NULL);
+    socket_server_mutex = CreateMutex(NULL, FALSE, NULL);
 
     while (1) {
-        printRequest("Enter command: 1-list chats; 2-create chat; 0 - quit: ");
+        print_request("Enter command: 1-list chats; 2-create chat; 0 - quit: ");
 
-        choice = readChar(false) - '0';
-        clearRequest();
+        choice = read_char(false) - '0';
+        clear_request();
 
         switch (choice) {
         case 0:
             goto exit;
         case 1:
-            showPrivateChats();
+            show_private_chats();
             break;
         case 2:
-            createChat(socketServer);
+            create_chat(socket_server);
             break;
         default:
-            printError("Invalid choice");
+            print_error("Invalid choice");
         }
     }
 
     exit:
-    lockConsoleSize(false);
-    disableSelection(false);
-    if (socketServer != INVALID_SOCKET)
-        closesocket(socketServer);
+    lock_console_size(false);
+    disable_selection(false);
+    if (socket_server != INVALID_SOCKET)
+        closesocket(socket_server);
 
     // Wait while thread stops
-    ReleaseMutex(socketThreadRunMutex);
-    WaitForSingleObject(socketThreadMutex, INFINITE);
+    ReleaseMutex(socket_thread_run_mutex);
+    WaitForSingleObject(socket_thread_mutex, INFINITE);
 
     WSACleanup();
 }

@@ -8,27 +8,27 @@
 
 typedef struct sClientInfo
 {
-    socklen_t   addressSize;
+    socklen_t   address_size;
     struct      sockaddr_storage address;
     SOCKET      socket;
     uint8_t     *buffer;
-    size_t      bufferSize;
+    size_t      buffer_size;
     HANDLE      mutex;
-    int         receivedBytes;
+    int         received_bytes;
     char        nickname[CLIENT_MAX_NICKNAME_SIZE + 1];
-    bool        isLoggedIn;
+    bool        is_logged_in;
     struct sClientInfo* next;
 } ClientInfo;
 
-extern ClientInfo* g_ciClients;
+extern ClientInfo* g_ci_clients;
 
-void initServerUtils();
+void init_server_utils();
 
-ClientInfo* getClient(SOCKET s);
-void        deleteClient(ClientInfo* client);
-char*       getClientAddress(ClientInfo *client);
-fd_set      waitForConnections(SOCKET server);
-fd_set      waitForPackets(void);
-void        addClientToSet(ClientInfo *client);
+ClientInfo* get_client(SOCKET s);
+void        delete_client(ClientInfo* client);
+char*       get_client_address(ClientInfo *client);
+fd_set      wait_for_connections(SOCKET server);
+fd_set      wait_for_packets(void);
+void        add_client_to_set(ClientInfo *client);
 
 #endif //RADIKCHAT_SERVERUTILS_H

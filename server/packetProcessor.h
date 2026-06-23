@@ -5,8 +5,8 @@
 #include "server.h"
 #include "packet.h"
 
-PacketServerRespond *processLoginPacket(TLPacket *tlPacket, PerSocketContext *perSocketContext);
-ServerRespond   processCreateChatPacket(PacketCreateChat *packetCreateChat);
-void            processMessagePacket(PacketMessage *packetMessage);
+PacketServerRespond *process_login_packet(TLPacket *tl_packet, PerSocketContext *per_socket_context);
+ServerRespond       process_create_chat_packet(PacketCreateChat *packetCreateChat);
+void                process_message_packet(PacketMessage *packet_message);
 
 #endif //RADIKCHAT_PACKETPROCESSOR_H

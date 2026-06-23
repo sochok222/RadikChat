@@ -19,9 +19,9 @@
     log_message(DBG_MODE_DEBUG, "[TRACE]: %s(), line %d: " fmt "\n", __FUNCTION__, __LINE__, ##__VA_ARGS__)
 #elif DEBUG_LEVEL >= 4
 #define DBG_DEBUG(fmt, ...)\
-    logMessage(DBG_MODE_DEBUG, "[DEBUG]: " fmt "\n", ##__VA_ARGS__)
+    log_message(DBG_MODE_DEBUG, "[DEBUG]: " fmt "\n", ##__VA_ARGS__)
 #define DBG_FUNC() \
-    logMessage(DBG_MODE_DEBUG, "[FUNC]: %s()\n", __FUNCTION__)
+    log_message(DBG_MODE_DEBUG, "[FUNC]: %s()\n", __FUNCTION__)
 #else
 #define DBG_DEBUG(...)
 #define DBG_FUNC()
@@ -29,28 +29,28 @@
 
 #if DEBUG_LEVEL >= 3
 #define DBG_INFO(fmt, ...)\
-    logMessage(DBG_MODE_INFO, "[INFO]: " fmt "\n", ##__VA_ARGS__)
+    log_message(DBG_MODE_INFO, "[INFO]: " fmt "\n", ##__VA_ARGS__)
 #else
 #define DBG_INFO(...)
 #endif
 
 #if DEBUG_LEVEL >= 2
 #define DBG_WARNING(fmt, ...) \
-    logMessage(DBG_MODE_WARNING, "[WARNING]: %s(), line %d: " fmt "\n", __FUNCTION__, __LINE__, ##__VA_ARGS__)
+    log_message(DBG_MODE_WARNING, "[WARNING]: %s(), line %d: " fmt "\n", __FUNCTION__, __LINE__, ##__VA_ARGS__)
 #else
 #define DBG_WARNING(...)
 #endif
 
 #if DEBUG_LEVEL >= 1
 #define DBG_ERROR(fmt, ...) \
-    logMessage(DBG_MODE_ERROR, "[ERROR] %s(), line %d: " fmt "\n", __FUNCTION__, __LINE__, ##__VA_ARGS__)
+    log_message(DBG_MODE_ERROR, "[ERROR] %s(), line %d: " fmt "\n", __FUNCTION__, __LINE__, ##__VA_ARGS__)
 #else
 #define DBG_ERROR(...)
 #endif
 
 #if DEBUG_LEVEL >= 1
 #define DBG_FATAL(fmt, ...)\
-    logMessage(DBG_MODE_FATAL, "[FATAL]: %s(), line %d: " fmt "\n", __FUNCTION__, __LINE__, ##__VA_ARGS__)
+    log_message(DBG_MODE_FATAL, "[FATAL]: %s(), line %d: " fmt "\n", __FUNCTION__, __LINE__, ##__VA_ARGS__)
 #else
 #define DBG_FATAL(...)
 #endif
@@ -69,18 +69,18 @@ typedef enum eConsoleFormatting
     formatSuccess = fgGreen | bgDefault,
 } TextFormat;
 
-void logMessage(int mode, const char *format, ...);
-void logWsaError(unsigned long error_code);
-void logWinError(unsigned long error_code);
-bool initDebug(const char *logFile);
-void setTextColor(TextFormat color);
-void printTimeElapsed(const char *m, time_t start, time_t stop);
+void log_message(int mode, const char *format, ...);
+void log_wsa_error(unsigned long error_code);
+void log_win_error(unsigned long error_code);
+bool init_debug(const char *log_file);
+void set_text_color(TextFormat color);
+void print_time_elapsed(const char *m, time_t start, time_t stop);
 
 #define PRINT_WSA_ERROR() \
-	logWsaError(WSAGetLastError())
+	log_wsa_error(WSAGetLastError())
 
 #define PRINT_WIN_ERROR() \
-	logWinError(GetLastError())
+	log_win_error(GetLastError())
 
 #else /* NO_DEBUG_BUILD */
 

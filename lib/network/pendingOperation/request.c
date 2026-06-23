@@ -6,34 +6,36 @@
 #define PENDING_REQUEST_BUFFER_SIZE 100
 #define MAX_PENDING_REQUESTS_BUFFER_SIZE 1024
 
-RequestSlot     requestsSlots[MAX_PENDING_REQUESTS] = { 0 };
-static Queue    requestsQueue;
-static Queue    oldRequestsQueue;
+RequestSlot     g_requests_slots[MAX_PENDING_REQUESTS] = { 0 };
+static Queue    requests_queue;
+static Queue    old_requests_queue;
 
-// TODO add mutex for requestsSlots
+// TODO add mutex for g_requests_slots
 
-void initRequests(void)
+void init_requests(void)
 {
-    initQueue(&requestsQueue);
+    init_queue(&requests_queue);
+    init_queue(&old_requests_queue);
     for (register uint32_t i = 0; i < MAX_PENDING_REQUESTS; i++) {
-        pushToQueue(&requestsQueue, i);
-        requestsSlots[i].request = NULL;
-        requestsSlots[i].gen = 0;
+        push_to_queue(&requests_queue, i);
+        g_requests_slots[i].request = NULL;
+        g_requests_slots[i].gen = 0;
     }
 }
 
-Request *createRequest(void)
+Request *create_request(void)
 {
-    if (isQueueEmpty(&requestsQueue)) {
+    if (is_queue_empty(&requests_queue)) {
         return NULL; // TODO handle this
     }
 
-    uint16_t requestPos = popFromQueue(&requestsQueue);
-    requestsSlots[requestPos].request = malloc(sizeof(Request));
-    requestsSlots[requestPos].timeStamp = time(NULL);
-    requestsSlots[requestPos].gen++;
+    uint16_t requestPos = pop_from_queue(&requests_queue);
+    push_to_queue(&old_requests_queue, requestPos);
+    g_requests_slots[requestPos].request = malloc(sizeof(Request));
+    g_requests_slots[requestPos].time_stamp = time(NULL);
+    g_requests_slots[requestPos].gen++;
 
-    Request *request = requestsSlots[requestPos].request;
+    Request *request = g_requests_slots[requestPos].request;
     request->id = requestPos;
     request->event = CreateEvent(NULL, FALSE, FALSE, NULL);
     request->mutex = CreateMutex(NULL, FALSE, NULL);
@@ -42,7 +44,7 @@ Request *createRequest(void)
     return request;
 }
 
-void deleteRequest(Request *request)
+void delete_request(Request *request)
 {
     // Free request's packet
     free(request->packet);
@@ -52,16 +54,17 @@ void deleteRequest(Request *request)
     CloseHandle(request->mutex);
 
     // Mark request slot as free
-    requestsSlots[request->id].request = NULL;
-    requestsSlots[request->id].timeStamp = 0;
-    pushToQueue(&requestsQueue, request->id);
+    g_requests_slots[request->id].request = NULL;
+    g_requests_slots[request->id].time_stamp = 0;
+    push_to_queue(&requests_queue, request->id);
+    pop_from_queue(&old_requests_queue);
 
     // Free memory
     free(request);
 }
 
-void associateRequest(TLPacket *packet, Request *request)
+void associate_request(TLPacket *packet, Request *request)
 {
-    tlPacketSetID(packet, request->id);
-    tlPacketSetGen(packet, requestsSlots[request->id].gen);
+    tl_packet_set_id(packet, request->id);
+    tl_packet_set_gen(packet, g_requests_slots[request->id].gen);
 }

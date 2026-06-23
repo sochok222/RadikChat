@@ -21,17 +21,17 @@
 #include <time.h>
 
 Contact *contacts = NULL;
-Contact *currentContact = NULL;
+Contact *current_contact = NULL;
 
-static DWORD WINAPI chatUpdateThread(void*);
+static DWORD WINAPI chat_update_thread(void*);
 typedef struct sChatUpdateThreadArg
 {
-    ChatHistory *chatHistory;
-    HANDLE startFromMutex;
-    int startFrom;
+    ChatHistory *chat_history;
+    HANDLE start_from_mutex;
+    int start_from;
 } ChatUpdateThreadArg;
 
-bool logIn(const SOCKET socket)
+bool log_in(const SOCKET socket)
 {
     DBG_FUNC();
     char    nickname[NICKNAME_LEN+1];
@@ -39,62 +39,62 @@ bool logIn(const SOCKET socket)
 
     Request *request;
 
-    printRequest("Enter nickname or q to quit:");
-    readInBuffer(nickname, NICKNAME_LEN);
-    clearRequest();
+    print_request("Enter nickname or q to quit:");
+    read_in_buffer(nickname, NICKNAME_LEN);
+    clear_request();
     if (strcmp(nickname, "q") == 0)
         return false;
 
-    request = createRequest();
+    request = create_request();
     if (request == NULL) {
         DBG_FATAL("Failed to create request");
         return false;
     }
 
-    PacketLogin *packetLogin = NULL;
-    createLoginPacket(&packetLogin);
+    PacketLogin *packet_login = NULL;
+    create_login_packet(&packet_login);
 
-    loginSetNickname(packetLogin, nickname);
-    associateRequest(packetLogin->tlPacket, request);
-    tlPackLogin(packetLogin);
-    int totalSent = 0;
-    while (totalSent < packetLogin->tlPacket->size) {
-        int sent = send(socket, packetLogin->tlPacket->data + totalSent, packetLogin->tlPacket->size - totalSent, 0);
+    login_set_nickname(packet_login, nickname);
+    associate_request(packet_login->tl_packet, request);
+    tl_pack_login(packet_login);
+    int total_sent = 0;
+    while (total_sent < packet_login->tl_packet->size) {
+        int sent = send(socket, packet_login->tl_packet->data + total_sent, packet_login->tl_packet->size - total_sent, 0);
         if (sent <= 0) {
             DBG_FATAL("Failed to send login packet");
             exit(1);
         }
-        totalSent += sent;
+        total_sent += sent;
     }
-    // sendPacket(socket, out, &socketServerMutex);
+    // send_packet(socket, out, &socket_server_mutex);
 
     WaitForSingleObject(request->event, INFINITE);
     WaitForSingleObject(request->mutex, INFINITE);
-    TLPacket *tlRespond = request->packet;
+    TLPacket *tl_respond = request->packet;
 
-    PacketParseStatus parseStatus;
-    PacketServerRespond *serverRespond = NULL;
-    if ((parseStatus = tlUnpackServerRespond(tlRespond, &serverRespond)) != PKT_PARSE_OK) {
-        DBG_ERROR("Failed to parse packet %s", getParseStatusString(parseStatus));
+    PacketParseStatus parse_status;
+    PacketServerRespond *server_respond = NULL;
+    if ((parse_status = tl_unpack_server_respond(tl_respond, &server_respond)) != PKT_PARSE_OK) {
+        DBG_ERROR("Failed to parse packet %s", get_parse_status_string(parse_status));
         // TODO handle error
         exit(1);
     }
 
-    switch (serverRespond->status) {
+    switch (server_respond->status) {
     case SERV_RESPOND_OK:
         result = true;
         break;
     default:
         DBG_ERROR("Server respond not ok");
-        // printStatusErrorMessage(in.status);
+        // print_status_error_message(in.status);
     }
 
-    deletePacketServerRespond(serverRespond);
-    deleteTLPacket(tlRespond);
+    delete_packet_server_respond(server_respond);
+    delete_tl_packet(tl_respond);
     return result;
 }
 
-void showPrivateChats(void)
+void show_private_chats(void)
 {
     DBG_FUNC();
     Contact *contact = contacts;
@@ -103,180 +103,180 @@ void showPrivateChats(void)
 
     while (true) {
         if (contact == NULL) {
-            printNotification(formatDefault, "No contacts found");
+            print_notification(formatDefault, "No contacts found");
             return;
         }
 
-        printRequest("press u to go up, d to go down and i to enter insert mode and q to quit");
+        print_request("press u to go up, d to go down and i to enter insert mode and q to quit");
         while (true) {
-            printContacts(contact, start);
+            print_contacts(contact, start);
             ch = getch();
             if (ch == 'd') {
-                if (appData.contactCount - start > getMainAreaHeight())
+                if (app_data.contact_count - start > get_main_area_height())
                     start++;
                 else
-                    printNotification(formatDefault, "Already at top");
-                printContacts(contact, start);
+                    print_notification(formatDefault, "Already at top");
+                print_contacts(contact, start);
             } else if (ch == 'u') {
                 if (start > 0)
                     start--;
                 else
-                    printNotification(formatDefault, "Already at bottom");
-                printContacts(contact, start);
+                    print_notification(formatDefault, "Already at bottom");
+                print_contacts(contact, start);
             } else if (ch == 'i') {
                 break;
             } else if (ch == 'q') {
-                clearScreen();
+                clear_screen();
                 return;
             }
         }
 
-        printRequest("Select chat: ");
-        readInBuffer(input, 128);
+        print_request("Select chat: ");
+        read_in_buffer(input, 128);
         selected = atoi(input);
 
-        if (selected > appData.contactCount || selected < 0) {
-            printNotification(formatDefault, "No such option");
+        if (selected > app_data.contact_count || selected < 0) {
+            print_notification(formatDefault, "No such option");
             continue;
         }
 
         for (contact = contacts, i = 0; i < selected; i++)
             contact = contact->next;
-        clearRequest();
-        openChat(contact);
+        clear_request();
+        open_chat(contact);
     }
 }
 
-void openChat(const Contact *contact)
+void open_chat(const Contact *contact)
 {
     DBG_FUNC();
-    char inputBuffer[100];
+    char input_buffer[100];
     char ch;
-    HANDLE chatUpdateThreadHandle;
-    ChatUpdateThreadArg chatUpdateArg;
+    HANDLE chat_update_thread_handle;
+    ChatUpdateThreadArg chat_update_arg;
 
-    printContactName("Chat with %s:", contact->nickname);
-    printChatHistory(contact->chatHistory, 0);
+    print_contact_name("Chat with %s:", contact->nickname);
+    print_chat_history(contact->chat_history, 0);
 
-    chatUpdateArg.chatHistory = &contact->chatHistory;
-    chatUpdateArg.startFromMutex = CreateMutex(NULL, FALSE, NULL);
-    chatUpdateArg.startFrom = 0;
+    chat_update_arg.chat_history = &contact->chat_history;
+    chat_update_arg.start_from_mutex = CreateMutex(NULL, FALSE, NULL);
+    chat_update_arg.start_from = 0;
 
-    chatUpdateThreadHandle = CreateThread(NULL, 0, chatUpdateThread, &chatUpdateArg, 0, 0);
+    chat_update_thread_handle = CreateThread(NULL, 0, chat_update_thread, &chat_update_arg, 0, 0);
 
     // Process input and send messages
     while (true) {
-        printRequest("Type your message, /quit to quit and /scroll to enter scroll mode");
-        readInBuffer(inputBuffer, sizeof(inputBuffer));
-        if (strlen(inputBuffer) == 0)
+        print_request("Type your message, /quit to quit and /scroll to enter scroll mode");
+        read_in_buffer(input_buffer, sizeof(input_buffer));
+        if (strlen(input_buffer) == 0)
             continue;
-        if (strcmp(inputBuffer, "/quit") == 0) {
-            TerminateThread(chatUpdateThreadHandle, 0);
-            clearScreen();
+        if (strcmp(input_buffer, "/quit") == 0) {
+            TerminateThread(chat_update_thread_handle, 0);
+            clear_screen();
             return;
         }
-        if (strcmp(inputBuffer, "/scroll") == 0) {
+        if (strcmp(input_buffer, "/scroll") == 0) {
             while (true) {
-                printRequest("press u to go up, d to go down, i to write message");
-                ch = readChar(false);
+                print_request("press u to go up, d to go down, i to write message");
+                ch = read_char(false);
                 if (ch == 'u') {
-                    if (contact->chatHistory.messages - chatUpdateArg.startFrom <= getMainAreaHeight()) {
-                        printNotification(formatDefault, "Already at top");
+                    if (contact->chat_history.messages - chat_update_arg.start_from <= get_main_area_height()) {
+                        print_notification(formatDefault, "Already at top");
                     } else {
-                        WaitForSingleObject(chatUpdateArg.startFromMutex, INFINITE);
-                        chatUpdateArg.startFrom++;
-                        ReleaseMutex(chatUpdateArg.startFromMutex);
-                        SetEvent(appData.messageEvent);
+                        WaitForSingleObject(chat_update_arg.start_from_mutex, INFINITE);
+                        chat_update_arg.start_from++;
+                        ReleaseMutex(chat_update_arg.start_from_mutex);
+                        SetEvent(app_data.message_event);
                     }
                 } else if (ch == 'd') {
-                    if (chatUpdateArg.startFrom <= 0) {
-                        chatUpdateArg.startFrom = 0;
-                        printNotification(formatDefault, "Already at bottom");
+                    if (chat_update_arg.start_from <= 0) {
+                        chat_update_arg.start_from = 0;
+                        print_notification(formatDefault, "Already at bottom");
                     } else {
-                        WaitForSingleObject(chatUpdateArg.startFromMutex, INFINITE);
-                        chatUpdateArg.startFrom--;
-                        ReleaseMutex(chatUpdateArg.startFromMutex);
-                        SetEvent(appData.messageEvent);
+                        WaitForSingleObject(chat_update_arg.start_from_mutex, INFINITE);
+                        chat_update_arg.start_from--;
+                        ReleaseMutex(chat_update_arg.start_from_mutex);
+                        SetEvent(app_data.message_event);
                     }
                 } else if (ch == 'i') {
                     break;
                 }
             }
-            inputBuffer[0] = '\0';
+            input_buffer[0] = '\0';
             continue;
         }
-        sendMessage(socketServer, contact, inputBuffer);
+        send_message(socket_server, contact, input_buffer);
     }
 }
 
-void sendMessage(SOCKET serverSocket, const Contact *contact, const char *message)
+void send_message(SOCKET server_socket, const Contact *contact, const char *message)
 {
     DBG_FUNC();
-    SendMessageThreadArg *arg = malloc(sizeof(*arg)); // Freed in sendMessageThread
-    Message *newMessage = addMessage(contact, message, true, MESSAGE_SEND_PENDING);
-    SetEvent(appData.messageEvent);
+    SendMessageThreadArg *arg = malloc(sizeof(*arg)); // Freed in send_message_thread
+    Message *newMessage = add_message(contact, message, true, MESSAGE_SEND_PENDING);
+    SetEvent(app_data.message_event);
 
     arg->message = newMessage;
     arg->contact = contact;
-    arg->socket = serverSocket;
+    arg->socket = server_socket;
 
-    _beginthread(sendMessageThread, 0, arg);
+    _beginthread(send_message_thread, 0, arg);
 }
 
-void createChat(SOCKET socket)
+void create_chat(SOCKET socket)
 {
     // DBG_FUNC();
     // Request  *request;
     // char            nickname[NICKNAME_LEN+1];
     // TLPacket          in, out;
     //
-    // printRequest("Enter nickname or q to quit: ");
-    // readInBuffer(nickname, NICKNAME_LEN);
-    // clearRequest();
+    // print_request("Enter nickname or q to quit: ");
+    // read_in_buffer(nickname, NICKNAME_LEN);
+    // clear_request();
     //
     // if (strcmp(nickname, "q") == 0)
     //     return;
     //
-    // if (findContact(nickname) != NULL) {
+    // if (find_contact(nickname) != NULL) {
     //     DBG_INFO("Chat already created");
-    //     printNotification(formatDefault, "Chat already created");
+    //     print_notification(formatDefault, "Chat already created");
     //     return;
     // }
     //
-    // request = createRequest();
+    // request = create_request();
     // if (request == NULL) {
     //     DBG_FATAL("Failed to create request");
-    //     printError("Can't create chat");
+    //     print_error("Can't create chat");
     //     return;
     // }
     // out = createPacket(TYPE_REQUEST, CMD_CREATE_CHAT, 0, request->id);
     // addPacketString(&out, nickname);
-    // sendPacket(socket, out, &socketServerMutex);
+    // send_packet(socket, out, &socket_server_mutex);
     //
     // WaitForSingleObject(request->event, INFINITE);
     // WaitForSingleObject(request->mutex, INFINITE);
     //
-    // in = packetFromBytes(request->data);
+    // in = packet_from_bytes(request->data);
     //
     // switch (in.status) {
     // case SERV_RESPOND_OK:
     //     DBG_INFO("Chat created");
     //     printSuccess("Chat created");
-    //     createContact(nickname);
+    //     create_contact(nickname);
     //     break;
     // default:
-    //     printStatusErrorMessage(in.status);
+    //     print_status_error_message(in.status);
     // }
     //
-    // deleteRequest(&request);
+    // delete_request(&request);
 }
 
-void deleteChat(const Contact *contact)
+void delete_chat(const Contact *contact)
 {
     DBG_FUNC();
 }
 
-int updateUnreadMessages(void)
+int update_unread_messages(void)
 {
     DBG_FUNC();
     int unread = 0;
@@ -290,22 +290,22 @@ int updateUnreadMessages(void)
     return unread;
 }
 
-static DWORD WINAPI chatUpdateThread(void *arg)
+static DWORD WINAPI chat_update_thread(void *arg)
 {
     DBG_FUNC();
     if (arg == NULL) {
         DBG_ERROR("No contact is selected\n");
         return 0;
     }
-    ChatHistory *chatHistory = ((ChatUpdateThreadArg*)arg)->chatHistory;
-    int startFrom;
+    ChatHistory *chat_history = ((ChatUpdateThreadArg*)arg)->chat_history;
+    int start_from;
 
-    static DWORD waitRes;
+    static DWORD wait_res;
     while (true) {
-        waitRes = WaitForSingleObject(appData.messageEvent, INFINITE);
-        startFrom = ((ChatUpdateThreadArg*)arg)->startFrom;
-        if (waitRes == WAIT_OBJECT_0) {
-            printChatHistory(*chatHistory, startFrom);
+        wait_res = WaitForSingleObject(app_data.message_event, INFINITE);
+        start_from = ((ChatUpdateThreadArg*)arg)->start_from;
+        if (wait_res == WAIT_OBJECT_0) {
+            print_chat_history(*chat_history, start_from);
         }
     }
 }

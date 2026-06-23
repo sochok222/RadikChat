@@ -3,10 +3,10 @@
 
 #include "chatsManager.h"
 
-Contact *createContact(const char *nickname);
-Contact *findContact(const char *nickname);
-void    deleteContact(const char *nickname);
-Message *addMessage(Contact *contact, const char *message, bool sender, MessageState state);
-int     contactCount();
+Contact *create_contact(const char *nickname);
+Contact *find_contact(const char *nickname);
+void    delete_contact(const char *nickname);
+Message *add_message(Contact *contact, const char *message, bool sender, MessageState state);
+int     contact_count();
 
 #endif //RADIKCHAT_CONTACTSMANAGER_H

@@ -20,15 +20,15 @@ typedef struct sPendingRequest
 typedef struct sRequestSlot
 {
     Request *request;
-    uint64_t timeStamp; // epoch time when request was created
+    uint64_t time_stamp; // epoch time when request was created
     uint16_t gen;
 } RequestSlot;
 
-void            initRequests(void);
-Request         *createRequest(void);
-void            deleteRequest(Request *request);
-void            associateRequest(TLPacket *packet, Request *request);
+void            init_requests(void);
+Request         *create_request(void);
+void            delete_request(Request *request);
+void            associate_request(TLPacket *packet, Request *request);
 
-extern RequestSlot  requestsSlots[MAX_PENDING_REQUESTS];
+extern RequestSlot  g_requests_slots[MAX_PENDING_REQUESTS];
 
 #endif //RADIKCHAT_REQUESTMANAGER_H

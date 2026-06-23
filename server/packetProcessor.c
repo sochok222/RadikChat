@@ -4,23 +4,23 @@
 #include "server.h"
 #include <tlPacket.h>
 
-// static bool sendMessage(ClientInfo *from, ClientInfo *to, const char *message);
+static bool send_message(ClientInfo *from, ClientInfo *to, const char *message);
 
-PacketServerRespond *processLoginPacket(TLPacket *tlPacket, PerSocketContext *perSocketContext)
+PacketServerRespond *process_login_packet(TLPacket *tl_packet, PerSocketContext *per_socket_context)
 {
     DBG_FUNC();
 
-    PacketParseStatus parseStatus;
-    PacketLogin *packetLogin;
+    PacketParseStatus parse_status;
+    PacketLogin *packet_login;
 
     // Create respond packet (check of parse status is not needed because packet is created)
     PacketServerRespond *respond;
-    tlUnpackServerRespond(nullptr, &respond);
+    tl_unpack_server_respond(nullptr, &respond);
 
     // Try to unpack login packet
-    if ((parseStatus = tlUnpackLogin(tlPacket, &packetLogin)) != PKT_PARSE_OK) {
-        DBG_ERROR("Failed to parse login packet: %s", getParseStatusString(parseStatus));
-        serverRespondSetRespond(respond, SERV_RESPOND_CANT_PARSE);
+    if ((parse_status = tl_unpack_login(tl_packet, &packet_login)) != PKT_PARSE_OK) {
+        DBG_ERROR("Failed to parse login packet: %s", get_parse_status_string(parse_status));
+        server_respond_set_respond(respond, SERV_RESPOND_CANT_PARSE);
         return respond;
     }
 
@@ -29,33 +29,33 @@ PacketServerRespond *processLoginPacket(TLPacket *tlPacket, PerSocketContext *pe
     PerSocketContext *it = g_clients;
     while (it != NULL) {
         if (it->nickname != NULL &&
-            strcmp(it->nickname, packetLogin->nickname) == 0) {
-            DBG_DEBUG("Found client already registered with same nickname %s", packetLogin->nickname);
-            serverRespondSetRespond(respond, SERV_RESPOND_ALREADY_EXISTS);
+            strcmp(it->nickname, packet_login->nickname) == 0) {
+            DBG_DEBUG("Found client already registered with same nickname %s", packet_login->nickname);
+            server_respond_set_respond(respond, SERV_RESPOND_ALREADY_EXISTS);
             return respond;
         }
-        it = it->pCtxtForward;
+        it = it->ctxt_forward;
     }
 
     // Check if nickname has enough length
-    if (strlen(packetLogin->nickname) == 0) {
+    if (strlen(packet_login->nickname) == 0) {
         DBG_INFO("Nickname has 0 length");
-        serverRespondSetRespond(respond, SERV_RESPOND_NICKNAME_TOO_SHORT);
+        server_respond_set_respond(respond, SERV_RESPOND_NICKNAME_TOO_SHORT);
         return respond;
     }
 
     // Saving nickname
-    perSocketContext->nickname = malloc(sizeof(char)*(strlen(packetLogin->nickname)+1));
-    strcpy(perSocketContext->nickname, packetLogin->nickname);
+    per_socket_context->nickname = malloc(sizeof(char)*(strlen(packet_login->nickname)+1));
+    strcpy(per_socket_context->nickname, packet_login->nickname);
 
     // free allocated data
-    deletePacketLogin(packetLogin);
+    delete_packet_login(packet_login);
 
-    serverRespondSetRespond(respond, SERV_RESPOND_OK);
+    server_respond_set_respond(respond, SERV_RESPOND_OK);
     return respond;
 }
 
-ServerRespond processCreateChatPacket(PacketCreateChat *client)
+ServerRespond process_create_chat_packet(PacketCreateChat *client)
 {
     return SERV_RESPOND_OK;
 //     DBG_FUNC();
@@ -66,7 +66,7 @@ ServerRespond processCreateChatPacket(PacketCreateChat *client)
 //     TLPacket      in, out;
 //     in.data = NULL; out.data = NULL;
 //
-//     in = packetFromBytes(client->buffer);
+//     in = packet_from_bytes(client->buffer);
 //     if (in.data == NULL) {
 //         DBG_ERROR("in.data is NULL");
 //         return;
@@ -83,33 +83,33 @@ ServerRespond processCreateChatPacket(PacketCreateChat *client)
 //     if ((nickname = readPacketString(&in, &readPos)) == NULL) {
 //         DBG_ERROR("Can't read nickname");
 //         out.status = SERV_RESPOND_CANT_PARSE;
-//         goto sendPacket;
+//         goto send_packet;
 //     }
 //
 //     if (strcmp(client->nickname, nickname) == 0) {
 //         DBG_INFO("Client tries to create chat with himself");
 //         out.status = SERV_RESPOND_ACTION_TO_HIMSELF;
-//         goto sendPacket;
+//         goto send_packet;
 //     }
 //
 //     // Search for if needed client is registered
-//     it = g_ciClients;
+//     it = g_ci_clients;
 //     while (it != NULL) {
 //         if (strcmp(it->nickname, nickname) == 0) {
 //             DBG_INFO("Found needed client");
 //             out.status = SERV_RESPOND_OK;
-//             goto sendPacket;
+//             goto send_packet;
 //         }
 //         it = it->next;
 //     }
 //     out.status = SERV_RESPOND_NOT_FOUND;
 //
-// sendPacket:
-//     sendPacket(client->socket, out, NULL);
+// send_packet:
+//     send_packet(client->socket, out, NULL);
 //     deletePacket(in); deletePacket(out);
 }
 
-void processMessagePacket(PacketMessage *packetMessage)
+void process_message_packet(PacketMessage *packet_message)
 {
     // DBG_FUNC();
     // ClientInfo  *it;
@@ -119,7 +119,7 @@ void processMessagePacket(PacketMessage *packetMessage)
     // TLPacket      in, toSender;
     // in.data = NULL; toSender.data = NULL;
     //
-    // in = packetFromBytes(client->buffer);
+    // in = packet_from_bytes(client->buffer);
     // if (in.data == NULL) {
     //     DBG_ERROR("in.data is NULL");
     //     if (in.parseError == PARSE_ERROR_MALLOC_FAILED) {
@@ -136,7 +136,7 @@ void processMessagePacket(PacketMessage *packetMessage)
     // if ((nickname = readPacketString(&in, &readPos)) == NULL) {
     //     DBG_ERROR("Can't read nickname");
     //     toSender.status = SERV_RESPOND_CANT_PARSE;
-    //     sendPacket(client->socket, toSender, NULL);
+    //     send_packet(client->socket, toSender, NULL);
     //     deletePacket(in); deletePacket(toSender);
     //     return;
     // }
@@ -144,13 +144,13 @@ void processMessagePacket(PacketMessage *packetMessage)
     // if ((message = readPacketString(&in, &readPos)) == NULL) {
     //     DBG_ERROR("Can't read message");
     //     toSender.status = SERV_RESPOND_CANT_PARSE;
-    //     sendPacket(client->socket, toSender, NULL);
+    //     send_packet(client->socket, toSender, NULL);
     //     deletePacket(in); deletePacket(toSender);
     //     return;
     // }
     //
     // // Search for if needed client is registered
-    // it = g_ciClients;
+    // it = g_ci_clients;
     // while (it != NULL) {
     //     if (strcmp(it->nickname, nickname) == 0) {
     //         DBG_INFO("Found needed client");
@@ -163,7 +163,7 @@ void processMessagePacket(PacketMessage *packetMessage)
     //     toSender.status = SERV_RESPOND_NOT_FOUND;
     // }
     //
-    // if (it != NULL && sendMessage(client, it, message) == true) {
+    // if (it != NULL && send_message(client, it, message) == true) {
     //     DBG_INFO("Message sent successfully\n");
     //     toSender.status = SERV_RESPOND_OK;
     // }
@@ -172,12 +172,12 @@ void processMessagePacket(PacketMessage *packetMessage)
     //     toSender.status = SERV_RESPOND_FAILURE;
     // }
     //
-    // sendPacket(client->socket, toSender, NULL);
+    // send_packet(client->socket, toSender, NULL);
     // deletePacket(in); deletePacket(toSender);
 }
 
 // TODO add packet resending if send fails
-static bool sendMessage(ClientInfo *from, ClientInfo *to, const char *message)
+static bool send_message(ClientInfo *from, ClientInfo *to, const char *message)
 {
     // TLPacket      in, out;
     // fd_set      fdRespond;
@@ -191,7 +191,7 @@ static bool sendMessage(ClientInfo *from, ClientInfo *to, const char *message)
     // addPacketString(&out, from->nickname);
     // addPacketString(&out, message);
     //
-    // sendPacket(to->socket, out, NULL);
+    // send_packet(to->socket, out, NULL);
     // deletePacket(out);
     //
     // // FIXME: this cycle method is unreliable, add handling to select timeout
@@ -200,7 +200,7 @@ static bool sendMessage(ClientInfo *from, ClientInfo *to, const char *message)
     //     FD_SET(to->socket, &fdRespond);
     //     if (select(0, &fdRespond, NULL, NULL, NULL) < 0) {
     //         DBG_FATAL("select() failed.\n");
-    //         logWsaError(WSAGetLastError());
+    //         log_wsa_error(WSAGetLastError());
     //         return false;
     //     }
     //
@@ -209,8 +209,8 @@ static bool sendMessage(ClientInfo *from, ClientInfo *to, const char *message)
     //         received = recv(to->socket, buffer + totalReceived, sizeof(buffer) - totalReceived, 0);
     //
     //         if (received <= 0 && errno != EAGAIN) {
-    //             DBG_DEBUG("Disconnect from %s client\n", getClientAddress(to));
-    //             deleteClient(to);
+    //             DBG_DEBUG("Disconnect from %s client\n", get_client_address(to));
+    //             delete_client(to);
     //             break;
     //         }
     //         totalReceived += received;

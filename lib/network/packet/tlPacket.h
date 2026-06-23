@@ -78,21 +78,21 @@ typedef struct sTLPacket // TL - transport layer
     uint8_t         *data;
 } TLPacket;
 
-const char *getParseStatusString(PacketParseStatus parseStatus);
+const char *get_parse_status_string(PacketParseStatus parse_status);
 
-[[nodiscard]] TLPacket          *allocTLPacket();
-[[nodiscard]] PacketParseStatus packetFromBytes(uint8_t *data, TLPacket **packet);
+[[nodiscard]] TLPacket          *alloc_tl_packet();
+[[nodiscard]] PacketParseStatus packet_from_bytes(uint8_t *data, TLPacket **packet);
 
-PacketParseStatus readPacketField(int fieldType, TLPacket *packet, uint32_t *readPos, void *out);
-void tlPackData(int fieldType, TLPacket *packet, const void *data);
+PacketParseStatus read_packet_field(int field_type, TLPacket *packet, uint32_t *read_pos, void *out);
+void tl_pack_data(int field_type, TLPacket *packet, const void *data);
 
-void deleteTLPacket(TLPacket *packet);
-void sendPacket(SOCKET socket, TLPacket packet, HANDLE *socketMutex);
-void tlPackHeader(TLPacket *packet);
+void delete_tl_packet(TLPacket *packet);
+void send_packet(SOCKET socket, TLPacket packet, HANDLE *socket_mutex);
+void tl_pack_header(TLPacket *packet);
 
-inline uint16_t tlPacketGetID(TLPacket *packet);
-inline uint16_t tlPacketGetGen(TLPacket *packet);
-inline void     tlPacketSetID(TLPacket *packet, uint16_t id);
-inline void     tlPacketSetGen(TLPacket *packet, uint16_t gen);
+inline uint16_t tl_packet_get_id(TLPacket *packet);
+inline uint16_t tl_packet_get_gen(TLPacket *packet);
+inline void     tl_packet_set_id(TLPacket *packet, uint16_t id);
+inline void     tl_packet_set_gen(TLPacket *packet, uint16_t gen);
 
 #endif //RADIKCHAT_NETWORKTYPES_H

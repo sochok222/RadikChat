@@ -1,9 +1,9 @@
 #ifndef RADIKCHAT_CONSOLEINPUT_H
 #define RADIKCHAT_CONSOLEINPUT_H
 
-void initInput(int width, int height);
-char *readInput();
-void readInBuffer(char *buffer, int bufferSize);
-int  readChar(bool echo);
+void init_input(int width, int height);
+char *read_input();
+void read_in_buffer(char *buffer, int buffer_size);
+int  read_char(bool echo);
 
 #endif //RADIKCHAT_CONSOLEINPUT_H

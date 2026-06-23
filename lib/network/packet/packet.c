@@ -1,177 +1,177 @@
 #include "packet.h"
 #include "debug.h"
 
-PacketParseStatus tlUnpackLogin(TLPacket *tlPacket, PacketLogin **packetLogin)
+PacketParseStatus tl_unpack_login(TLPacket *tl_packet, PacketLogin **packet_login)
 {
-    bool newPacket = false;
+    bool new_packet = false;
     PacketLogin *result;
 
-    if (tlPacket != nullptr && tlPacket->command != CMD_LOGIN)
+    if (tl_packet != nullptr && tl_packet->command != CMD_LOGIN)
         return PKT_PARSE_INVALID_COMMAND;
 
-    if (tlPacket == nullptr) {
-        newPacket = true;
-        tlPacket = allocTLPacket();
-        tlPacket->command = CMD_LOGIN;
+    if (tl_packet == nullptr) {
+        new_packet = true;
+        tl_packet = alloc_tl_packet();
+        tl_packet->command = CMD_LOGIN;
     }
 
     if ((result = malloc(sizeof(*result))) == nullptr) {
         DBG_FATAL("Out of memory");
         exit(1);
     }
-    result->tlPacket = tlPacket;
-    result->nicknameLen = 0;
-    result->nicknameCapacity = 0;
+    result->tl_packet = tl_packet;
+    result->nickname_len = 0;
+    result->nickname_capacity = 0;
     result->nickname = NULL;
 
-    if (newPacket) {
-        *packetLogin = result;
+    if (new_packet) {
+        *packet_login = result;
         return PKT_PARSE_OK;
     }
 
-    uint32_t readPos = 0; int parseStatus;
-    if ((parseStatus = readPacketField(PKT_F_STRING, tlPacket, &readPos, &result->nickname)) != PKT_PARSE_OK) {
+    uint32_t read_pos = 0; int parse_status;
+    if ((parse_status = read_packet_field(PKT_F_STRING, tl_packet, &read_pos, &result->nickname)) != PKT_PARSE_OK) {
         free(result);
-        return parseStatus;
+        return parse_status;
     }
-    result->nicknameLen = strlen(result->nickname);
+    result->nickname_len = strlen(result->nickname);
 
-    *packetLogin = result;
+    *packet_login = result;
     return PKT_PARSE_OK;
 }
 
-void tlPackLogin(PacketLogin *packetLogin)
+void tl_pack_login(PacketLogin *packet_login)
 {
-    tlPackData(PKT_F_STRING, packetLogin->tlPacket, packetLogin->nickname);
-    tlPackHeader(packetLogin->tlPacket);
+    tl_pack_data(PKT_F_STRING, packet_login->tl_packet, packet_login->nickname);
+    tl_pack_header(packet_login->tl_packet);
 }
 
-void loginSetNickname(PacketLogin *packetLogin, char *nickname)
+void login_set_nickname(PacketLogin *packet_login, char *nickname)
 {
-    uint16_t nicknameLen = strlen(nickname);
+    uint16_t nickname_len = strlen(nickname);
 
-    if (packetLogin->nicknameCapacity < nicknameLen + 1) {
-        packetLogin->nickname = realloc(packetLogin->nickname, nicknameLen + 1);
-        if (packetLogin->nickname == nullptr) {
+    if (packet_login->nickname_capacity < nickname_len + 1) {
+        packet_login->nickname = realloc(packet_login->nickname, nickname_len + 1);
+        if (packet_login->nickname == nullptr) {
             DBG_FATAL("Out of memory");
             exit(1);
         }
-        packetLogin->nicknameLen = nicknameLen + 1;
-        packetLogin->nicknameCapacity = nicknameLen + 1;
-        memcpy(packetLogin->nickname, nickname, nicknameLen + 1);
+        packet_login->nickname_len = nickname_len + 1;
+        packet_login->nickname_capacity = nickname_len + 1;
+        memcpy(packet_login->nickname, nickname, nickname_len + 1);
     }
 }
 
-void deletePacketLogin(PacketLogin *packetLogin)
+void delete_packet_login(PacketLogin *packet_login)
 {
-    // deleteTLPacket(packetLogin->tlPacket);
-    if (packetLogin->nicknameCapacity > 0)
-        free(packetLogin->nickname);
-    free(packetLogin);
+    // delete_tl_packet(packet_login->tl_packet);
+    if (packet_login->nickname_capacity > 0)
+        free(packet_login->nickname);
+    free(packet_login);
 }
 
-PacketParseStatus tlUnpackCreateChat(TLPacket *tlPacket, PacketCreateChat **packetCreateChat)
+PacketParseStatus tl_unpack_create_chat(TLPacket *tl_packet, PacketCreateChat **packet_create_chat)
 {
-    bool newPacket = false;
+    bool new_packet = false;
     PacketCreateChat *result = nullptr;
 
-    if (tlPacket != nullptr && tlPacket->command != CMD_CREATE_CHAT)
+    if (tl_packet != nullptr && tl_packet->command != CMD_CREATE_CHAT)
         return PKT_PARSE_INVALID_COMMAND;
 
-    if (tlPacket == nullptr) {
-        newPacket = true;
-        tlPacket = allocTLPacket();
-        tlPacket->command = CMD_CREATE_CHAT;
+    if (tl_packet == nullptr) {
+        new_packet = true;
+        tl_packet = alloc_tl_packet();
+        tl_packet->command = CMD_CREATE_CHAT;
     }
 
     if ((result = malloc(sizeof(*result))) == nullptr) {
         DBG_FATAL("Out of memory");
         exit(1);
     }
-    result->tlPacket = tlPacket;
-    result->receiverID = 0;
+    result->tl_packet = tl_packet;
+    result->receiver_id = 0;
 
-    if (newPacket) {
-        *packetCreateChat = result;
+    if (new_packet) {
+        *packet_create_chat = result;
         return PKT_PARSE_OK;
     }
 
-    uint32_t readPos = 0; int parseStatus;
-    if ((parseStatus = readPacketField(PKT_F_UINT64, tlPacket, &readPos, &result->receiverID)) != PKT_PARSE_OK) {
+    uint32_t read_pos = 0; int parse_status;
+    if ((parse_status = read_packet_field(PKT_F_UINT64, tl_packet, &read_pos, &result->receiver_id)) != PKT_PARSE_OK) {
         free(result);
-        return parseStatus;
+        return parse_status;
     }
 
-    *packetCreateChat = result;
+    *packet_create_chat = result;
     return PKT_PARSE_OK;
 }
 
-void tlPackCreateChat(PacketCreateChat *packetCreateChat)
+void tl_pack_create_chat(PacketCreateChat *packet_create_chat)
 {
-    tlPackData(PKT_F_UINT64, packetCreateChat->tlPacket, &packetCreateChat->receiverID);
-    tlPackHeader(packetCreateChat->tlPacket);
+    tl_pack_data(PKT_F_UINT64, packet_create_chat->tl_packet, &packet_create_chat->receiver_id);
+    tl_pack_header(packet_create_chat->tl_packet);
 }
 
-void createChatSetReceiverID(PacketCreateChat *packetCreateChat, ReceiverID receiverID)
+void create_chat_set_receiver_id(PacketCreateChat *packet_create_chat, receiver_id receiverID)
 {
-    packetCreateChat->receiverID = receiverID;
+    packet_create_chat->receiver_id = receiverID;
 }
 
-void deletePacketCreateChat(PacketCreateChat *packetCreateChat)
+void delete_packet_create_chat(PacketCreateChat *packet_create_chat)
 {
-    // deleteTLPacket(packetCreateChat->tlPacket);
-    free(packetCreateChat);
+    // delete_tl_packet(packet_create_chat->tl_packet);
+    free(packet_create_chat);
 }
 
-PacketParseStatus tlUnpackServerRespond(TLPacket *tlPacket, PacketServerRespond **packetServerRespond)
+PacketParseStatus tl_unpack_server_respond(TLPacket *tl_packet, PacketServerRespond **packet_server_respond)
 {
-    bool newPacket = false;
+    bool new_packet = false;
     PacketServerRespond *result = nullptr;
 
-    if (tlPacket != nullptr && tlPacket->command != CMD_SERVER_RESPOND)
+    if (tl_packet != nullptr && tl_packet->command != CMD_SERVER_RESPOND)
         return PKT_PARSE_INVALID_COMMAND;
 
-    if (tlPacket == nullptr) {
-        newPacket = true;
-        tlPacket = allocTLPacket();
-        tlPacket->command = CMD_SERVER_RESPOND;
+    if (tl_packet == nullptr) {
+        new_packet = true;
+        tl_packet = alloc_tl_packet();
+        tl_packet->command = CMD_SERVER_RESPOND;
     }
 
     if ((result = malloc(sizeof(*result))) == nullptr) {
         DBG_FATAL("Out of memory");
         exit(1);
     }
-    result->tlPacket = tlPacket;
+    result->tl_packet = tl_packet;
     result->status = 0;
 
-    if (newPacket) {
-        *packetServerRespond = result;
+    if (new_packet) {
+        *packet_server_respond = result;
         return PKT_PARSE_OK;
     }
 
-    uint32_t readPos = 0; int parseStatus;
-    if ((parseStatus = readPacketField(PKT_F_UINT16, tlPacket, &readPos, &result->status)) != PKT_PARSE_OK) {
+    uint32_t read_pos = 0; int parse_status;
+    if ((parse_status = read_packet_field(PKT_F_UINT16, tl_packet, &read_pos, &result->status)) != PKT_PARSE_OK) {
         free(result);
-        return parseStatus;
+        return parse_status;
     }
 
-    *packetServerRespond = result;
+    *packet_server_respond = result;
     return PKT_PARSE_OK;
 }
 
-void tlPackServerRespond(PacketServerRespond *packetServerRespond)
+void tl_pack_server_respond(PacketServerRespond *packet_server_respond)
 {
-    tlPackData(PKT_F_UINT16, packetServerRespond->tlPacket, &packetServerRespond->status);
-    tlPackHeader(packetServerRespond->tlPacket);
+    tl_pack_data(PKT_F_UINT16, packet_server_respond->tl_packet, &packet_server_respond->status);
+    tl_pack_header(packet_server_respond->tl_packet);
 }
 
-void serverRespondSetRespond(PacketServerRespond *packetServerRespond, ServerRespond status)
+void server_respond_set_respond(PacketServerRespond *packet_server_respond, ServerRespond status)
 {
-    packetServerRespond->status = status;
+    packet_server_respond->status = status;
 }
 
-void deletePacketServerRespond(PacketServerRespond *packetServerRespond)
+void delete_packet_server_respond(PacketServerRespond *packet_server_respond)
 {
-    // deleteTLPacket(packetServerRespond->tlPacket);
-    free(packetServerRespond);
+    // delete_tl_packet(packet_server_respond->tl_packet);
+    free(packet_server_respond);
 }

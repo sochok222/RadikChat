@@ -8,27 +8,27 @@
 #define MAX_PENDING_DELIVERIES 100
 #define MAX_CLIENT_BUFFER_SIZE 1024
 
-ClientInfo *g_ciClients = NULL;
-static fd_set fdClients;
-static HANDLE fdClientsMutex;
+ClientInfo *g_ci_clients = NULL;
+static fd_set fd_clients;
+static HANDLE fd_clients_mutex;
 
-void initServerUtils()
+void init_server_utils()
 {
-    fdClientsMutex = CreateMutex(NULL, FALSE, NULL);
-    FD_ZERO(&fdClients);
+    fd_clients_mutex = CreateMutex(NULL, FALSE, NULL);
+    FD_ZERO(&fd_clients);
 }
 
-void addClientToSet(ClientInfo *client)
+void add_client_to_set(ClientInfo *client)
 {
-    WaitForSingleObject(fdClientsMutex, INFINITE);
-    FD_SET(client->socket, &fdClients);
-    ReleaseMutex(fdClientsMutex);
+    WaitForSingleObject(fd_clients_mutex, INFINITE);
+    FD_SET(client->socket, &fd_clients);
+    ReleaseMutex(fd_clients_mutex);
 }
 
-ClientInfo* getClient(SOCKET s)
+ClientInfo* get_client(SOCKET s)
 {
     DBG_FUNC();
-    ClientInfo *it = g_ciClients;
+    ClientInfo *it = g_ci_clients;
 
     while (it != NULL) {
         if (it->socket == s)
@@ -36,28 +36,28 @@ ClientInfo* getClient(SOCKET s)
         it = it->next;
     }
 
-    ClientInfo *newClient = calloc(1, sizeof(ClientInfo));
+    ClientInfo *new_client = calloc(1, sizeof(ClientInfo));
 
-    newClient->buffer = malloc(sizeof(*newClient->buffer) * MAX_CLIENT_BUFFER_SIZE);
-    newClient->bufferSize = MAX_CLIENT_BUFFER_SIZE;
-    newClient->mutex = CreateMutex(NULL, FALSE, NULL);
-    newClient->isLoggedIn = false;
+    new_client->buffer = malloc(sizeof(*new_client->buffer) * MAX_CLIENT_BUFFER_SIZE);
+    new_client->buffer_size = MAX_CLIENT_BUFFER_SIZE;
+    new_client->mutex = CreateMutex(NULL, FALSE, NULL);
+    new_client->is_logged_in = false;
 
-    newClient->addressSize = sizeof(newClient->address);
-    newClient->next = g_ciClients;
-    g_ciClients = newClient;
+    new_client->address_size = sizeof(new_client->address);
+    new_client->next = g_ci_clients;
+    g_ci_clients = new_client;
 
-    return newClient;
+    return new_client;
 }
 
-void deleteClient(ClientInfo *client)
+void delete_client(ClientInfo *client)
 {
     DBG_FUNC();
     closesocket(client->socket);
-    WaitForSingleObject(fdClientsMutex, INFINITE);
-    FD_CLR(client->socket, &fdClients);
-    ReleaseMutex(fdClientsMutex);
-    ClientInfo **p = &g_ciClients;
+    WaitForSingleObject(fd_clients_mutex, INFINITE);
+    FD_CLR(client->socket, &fd_clients);
+    ReleaseMutex(fd_clients_mutex);
+    ClientInfo **p = &g_ci_clients;
     while(*p) {
         if (*p == client) {
             *p = client->next;
@@ -71,49 +71,50 @@ void deleteClient(ClientInfo *client)
     DBG_ERROR("client not found");
 }
 
-char *getClientAddress(ClientInfo *client)
+// FIXME make this function write to buffer passed as argument
+char *get_client_address(ClientInfo *client)
 {
-    static char clientAddress[MAX_CLIENT_ADDRESS_SIZE];
+    static char client_address[MAX_CLIENT_ADDRESS_SIZE];
 
     getnameinfo((struct sockaddr*)&client->address,
-                client->addressSize,
-                clientAddress, sizeof(clientAddress), 0, 0,
+                client->address_size,
+                client_address, sizeof(client_address), 0, 0,
                 NI_NUMERICHOST);
 
-    return clientAddress;
+    return client_address;
 }
 
-fd_set waitForConnections(SOCKET server)
+fd_set wait_for_connections(SOCKET server)
 {
     DBG_FUNC();
-    static fd_set fdReads;
-    FD_ZERO(&fdReads);
-    FD_SET(server, &fdReads);
+    static fd_set fd_reads;
+    FD_ZERO(&fd_reads);
+    FD_SET(server, &fd_reads);
 
-    if (select(0, &fdReads, 0, 0, NULL) < 0) {
+    if (select(0, &fd_reads, 0, 0, NULL) < 0) {
         DBG_FATAL("waitForClients select() failed.");
-        logWsaError(WSAGetLastError());
+        log_wsa_error(WSAGetLastError());
         exit(1);
     }
 
-    return fdReads;
+    return fd_reads;
 }
 
-fd_set waitForPackets(void)
+fd_set wait_for_packets(void)
 {
     DBG_FUNC();
-    static fd_set fdResult;
-    FD_ZERO(&fdResult);
+    static fd_set fd_result;
+    FD_ZERO(&fd_result);
 
-    WaitForSingleObject(fdClientsMutex, INFINITE);
-    fdResult = fdClients;
-    ReleaseMutex(fdClientsMutex);
+    WaitForSingleObject(fd_clients_mutex, INFINITE);
+    fd_result = fd_clients;
+    ReleaseMutex(fd_clients_mutex);
 
-    if (select(0, &fdResult, 0, 0, 0) < 0) {
-        DBG_FATAL("waitForPackets select() failed.");
-        logWsaError(WSAGetLastError());
+    if (select(0, &fd_result, 0, 0, 0) < 0) {
+        DBG_FATAL("wait_for_packets select() failed.");
+        log_wsa_error(WSAGetLastError());
         exit(1);
     }
 
-    return fdResult;
+    return fd_result;
 }

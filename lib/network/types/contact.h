@@ -26,7 +26,7 @@ typedef struct sContact
 {
     char            *nickname;
     int             unread;
-    ChatHistory     chatHistory;
+    ChatHistory     chat_history;
     struct sContact *next;
 } Contact;
 

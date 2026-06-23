@@ -14,64 +14,64 @@
 #define PRIVATE static
 #define PUBLIC
 
-PRIVATE FILE *fOut, *mStdout, *mStderr;
-PRIVATE bool toConsole;
-PRIVATE HANDLE hOut;
+PRIVATE FILE *f_out, *m_stdout, *m_stderr;
+PRIVATE bool to_console;
+PRIVATE HANDLE h_out;
 
-bool initDebug(const char *logFile)
+bool init_debug(const char *log_file)
 {
-    fOut = NULL;
-    toConsole = logFile == NULL;
-    hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+    f_out = NULL;
+    to_console = log_file == NULL;
+    h_out = GetStdHandle(STD_OUTPUT_HANDLE);
 
-    if (logFile != NULL) {
-        if ((fOut = fopen(logFile, "a")) == NULL) {
+    if (log_file != NULL) {
+        if ((f_out = fopen(log_file, "a")) == NULL) {
             printf("Can't open log file");
             return false;
         }
-        mStdout = fOut;
-        mStderr = fOut;
+        m_stdout = f_out;
+        m_stderr = f_out;
         return true;
     }
 
-    mStdout = stdout;
-    mStderr = stderr;
+    m_stdout = stdout;
+    m_stderr = stderr;
     return true;
 }
 
 /* Log wsa error code converted to string with colorful output */
-void logWsaError(unsigned long error_code)
+void log_wsa_error(unsigned long error_code)
 {
-	wchar_t *s = NULL;
+	wchar_t *error_string = NULL;
 
 	/* Get error text description from error code */
 	FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
 		NULL,
 		error_code,
 		MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-		(LPWSTR)&s,
+		(LPWSTR)&error_string,
 		0,
 		NULL
 		);
 
-	if (s != NULL) {
-		fprintf(mStderr, "Error message: ");
+	if (error_string != NULL) {
+		fprintf(m_stderr, "Error message: ");
 
 	    // Red text, default bg
-	    setTextColor(fgRed | bgDefault);
-	    fprintf(mStderr, "%S", s);
-	    setTextColor(formatDefault);
+	    set_text_color(fgRed | bgDefault);
+	    fprintf(m_stderr, "%S", error_string);
+	    set_text_color(formatDefault);
 
-		LocalFree(s);
+		LocalFree(error_string);
 	}
 	else {
         DBG_ERROR("Can't find error message for error code (%d)", error_code);
 	}
 }
 
-void logWinError(unsigned long error_code)
+void log_win_error(unsigned long error_code)
 {
-    wchar_t *lpMsgBuf = NULL;
+    wchar_t *error_string = NULL;
 
     if (FormatMessageW(
         FORMAT_MESSAGE_ALLOCATE_BUFFER |
@@ -80,22 +80,22 @@ void logWinError(unsigned long error_code)
         NULL,
         error_code,
         MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-        (LPWSTR)&lpMsgBuf,
+        (LPWSTR)&error_string,
         0, NULL) == 0) {
         MessageBox(NULL, TEXT("FormatMessage failed"), TEXT("Error"), MB_OK);
         ExitProcess(error_code);
     }
 
-    setTextColor(fgRed | bgDefault);
-    fprintf(mStderr, "[WINERROR]: %S", lpMsgBuf);
-    setTextColor(formatDefault);
-    fflush(mStderr);
+    set_text_color(fgRed | bgDefault);
+    fprintf(m_stderr, "[WINERROR]: %S", error_string);
+    set_text_color(formatDefault);
+    fflush(m_stderr);
 
-    LocalFree(lpMsgBuf);
+    LocalFree(error_string);
 }
 
 /* Log message with color corresponding to level */
-void logMessage(int mode, const char *format, ...)
+void log_message(int mode, const char *format, ...)
 {
     char buffer[256] = {0};
 	va_list args;
@@ -103,23 +103,23 @@ void logMessage(int mode, const char *format, ...)
 
 	switch (mode) {
 		case DBG_MODE_FATAL:
-	        setTextColor(formatError);
-			out = mStderr;
+	        set_text_color(formatError);
+			out = m_stderr;
 			break;
 		case DBG_MODE_ERROR:
-	        setTextColor(formatError);
-			out = mStderr;
+	        set_text_color(formatError);
+			out = m_stderr;
 			break;
 		case DBG_MODE_WARNING:
-	        setTextColor(formatError);
-			out = mStderr;
+	        set_text_color(formatError);
+			out = m_stderr;
 			break;
 		case DBG_MODE_INFO:
-	        setTextColor(formatNotification);
-			out = mStdout;
+	        set_text_color(formatNotification);
+			out = m_stdout;
 			break;
 		default:
-			out = mStdout;
+			out = m_stdout;
 			break;
 	}
 	/* Printing args */
@@ -129,15 +129,15 @@ void logMessage(int mode, const char *format, ...)
 	va_start(args, format);
         vsprintf(buffer, format, args);
 	va_end(args);
-    WriteConsoleA(hOut, buffer, strlen(buffer), NULL, NULL);
+    WriteConsoleA(h_out, buffer, strlen(buffer), NULL, NULL);
     // fflush(out);
 
-    setTextColor(formatDefault);
+    set_text_color(formatDefault);
 }
 
-void setTextColor(TextFormat color)
+void set_text_color(TextFormat color)
 {
-    static char buffer[25];
+    char buffer[25];
     memset(buffer, 0, 25);
 
     strcpy(buffer, CSI);
@@ -159,7 +159,7 @@ void setTextColor(TextFormat color)
     printf(buffer);
 }
 
-void printTimeElapsed(const char *m, time_t start, time_t stop)
+void print_time_elapsed(const char *m, time_t start, time_t stop)
 {
     double elapsed = ((double)stop - start) / CLOCKS_PER_SEC;
     DBG_INFO("%s %lf", m, elapsed);

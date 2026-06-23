@@ -15,9 +15,9 @@
 #define PKT_F_STRING_OFFSET (sizeof(size_t))
 #define PACKET_CONTENT_OFFSET PACKET_HEADER_SIZE // content offset - begin of payload
 
-static inline size_t getSizeOfType(int fieldType);
+static inline size_t get_size_of_type(int file_type);
 
-TLPacket *allocTLPacket()
+TLPacket *alloc_tl_packet()
 {
     TLPacket *packet = malloc(sizeof(*packet));
     if (packet == nullptr) {
@@ -32,7 +32,7 @@ TLPacket *allocTLPacket()
     return packet;
 }
 
-PacketParseStatus packetFromBytes(uint8_t *data, TLPacket **packet)
+PacketParseStatus packet_from_bytes(uint8_t *data, TLPacket **packet)
 {
     TLPacket *result;
     if ((result = malloc(sizeof(*result))) == nullptr) {
@@ -64,20 +64,20 @@ PacketParseStatus packetFromBytes(uint8_t *data, TLPacket **packet)
     return PKT_PARSE_OK;
 }
 
-void deleteTLPacket(TLPacket *packet)
+void delete_tl_packet(TLPacket *packet)
 {
     if (packet->data != NULL)
         free(packet->data);
     free(packet);
 }
 
-void sendPacket(SOCKET socket, TLPacket packet, HANDLE *socketMutex)
+void send_packet(SOCKET socket, TLPacket packet, HANDLE *socket_mutex)
 {
-    size_t totalSend = 0;
+    size_t total_send = 0;
     uint8_t header[PKT_HEADER_SIZE] = { 0 };
     size_t offset = 0;
-    if (socketMutex != NULL)
-        WaitForSingleObject(*socketMutex, INFINITE);
+    if (socket_mutex != NULL)
+        WaitForSingleObject(*socket_mutex, INFINITE);
 
     // Packing data to header
     packet.size += PKT_HEADER_SIZE;
@@ -85,35 +85,35 @@ void sendPacket(SOCKET socket, TLPacket packet, HANDLE *socketMutex)
     memcpy(header + offset, &packet.command, sizeof(packet.command)); offset += sizeof(packet.command);
     memcpy(header + offset, &packet.id, sizeof(packet.id));
 
-    while (totalSend < PKT_HEADER_SIZE) {
-        int sent = send(socket, header + totalSend, PKT_HEADER_SIZE - totalSend, 0);
+    while (total_send < PKT_HEADER_SIZE) {
+        int sent = send(socket, header + total_send, PKT_HEADER_SIZE - total_send, 0);
         if (sent <= 0) {
             DBG_FATAL("Can`t send packet to the server");
-            printNotification(formatError, "can`t send packet to the server");
+            print_notification(formatError, "can`t send packet to the server");
             exit(1);
         }
-        totalSend += sent;
+        total_send += sent;
     }
 
     packet.size -= PKT_HEADER_SIZE;
 
-    totalSend = 0;
-    while (totalSend < packet.size) {
-        int maxSend = packet.size - totalSend > INT_MAX ? INT_MAX : (int)(packet.size - totalSend);
-        int sent = send(socket, (char*)packet.data + totalSend, maxSend, 0);
+    total_send = 0;
+    while (total_send < packet.size) {
+        int max_send = packet.size - total_send > INT_MAX ? INT_MAX : (int)(packet.size - total_send);
+        int sent = send(socket, (char*)packet.data + total_send, max_send, 0);
         if (sent <= 0) {
             DBG_FATAL("Can`t send packet to the server\n");
-            printNotification(formatError, "can`t send packet to the server");
+            print_notification(formatError, "can`t send packet to the server");
             exit(1);
         }
-        totalSend += sent;
+        total_send += sent;
     }
 
-    if (socketMutex != NULL)
-        ReleaseMutex(*socketMutex);
+    if (socket_mutex != NULL)
+        ReleaseMutex(*socket_mutex);
 }
 
-void tlPackHeader(TLPacket *packet)
+void tl_pack_header(TLPacket *packet)
 {
     size_t offset = 0;
 
@@ -123,68 +123,68 @@ void tlPackHeader(TLPacket *packet)
     memcpy(packet->data + offset, &packet->id, sizeof(packet->id));
 }
 
-void tlPackData(int fieldType, TLPacket *packet, const void *data)
+void tl_pack_data(int field_type, TLPacket *packet, const void *data)
 {
-    size_t fieldSize;
-    if (fieldType == PKT_F_STRING)
-        fieldSize = strlen((char*)data);
+    size_t field_size;
+    if (field_type == PKT_F_STRING)
+        field_size = strlen((char*)data);
     else
-        fieldSize = getSizeOfType(fieldType);
+        field_size = get_size_of_type(field_type);
 
-    if (packet->size + fieldSize > packet->capacity) {
-        packet->data = realloc(packet->data, packet->size + fieldSize + 10); // NOTE + 10 is temporary solution
-        packet->capacity = packet->size + fieldSize;
+    if (packet->size + field_size > packet->capacity) {
+        packet->data = realloc(packet->data, packet->size + field_size + 10); // NOTE + 10 is temporary solution
+        packet->capacity = packet->size + field_size;
     }
-    if (fieldType == PKT_F_STRING) {
-        fieldSize++; // Need to send null symbol
-        memcpy(packet->data + packet->size, &fieldSize, sizeof(fieldSize));
-        packet->size += sizeof(fieldSize);
-        memcpy(packet->data + packet->size, data, fieldSize + 1);
+    if (field_type == PKT_F_STRING) {
+        field_size++; // Need to send null symbol
+        memcpy(packet->data + packet->size, &field_size, sizeof(field_size));
+        packet->size += sizeof(field_size);
+        memcpy(packet->data + packet->size, data, field_size + 1);
     } else {
-        memcpy(packet->data + packet->size, data, fieldSize);
+        memcpy(packet->data + packet->size, data, field_size);
     }
-    packet->size += fieldSize;
+    packet->size += field_size;
 }
 
-PacketParseStatus readPacketField(int fieldType, TLPacket *packet, uint32_t *readPos, void *out)
+PacketParseStatus read_packet_field(int field_type, TLPacket *packet, uint32_t *read_pos, void *out)
 {
-    size_t fieldSize;
-    if (*readPos == 0) {
-        *readPos = PKT_HEADER_SIZE; // payload starts after header
+    size_t field_size;
+    if (*read_pos == 0) {
+        *read_pos = PKT_HEADER_SIZE; // payload starts after header
     }
-    if (packet->size - *readPos < (fieldSize = getSizeOfType(fieldType)))
+    if (packet->size - *read_pos < (field_size = get_size_of_type(field_type)))
        return PKT_PARSE_SIZE_MISMATCH;
 
-    switch (fieldType) {
+    switch (field_type) {
     case PKT_F_STRING:
-        fieldSize = *(size_t*)(packet->data + *readPos + PKT_F_STR_LEN_OFFSET);
-        if (packet->size - *readPos < fieldSize)
+        field_size = *(size_t*)(packet->data + *read_pos + PKT_F_STR_LEN_OFFSET);
+        if (packet->size - *read_pos < field_size)
             return PKT_PARSE_SIZE_MISMATCH;
-        *((char**)out) = (char*)(packet->data + *readPos + PKT_F_STRING_OFFSET);
+        *((char**)out) = (char*)(packet->data + *read_pos + PKT_F_STRING_OFFSET);
         break;
     case PKT_F_UINT8:
-        *((uint8_t*)out) = *(uint8_t*)(packet->data + *readPos);
+        *((uint8_t*)out) = *(uint8_t*)(packet->data + *read_pos);
         break;
     case PKT_F_UINT16:
-        *((uint16_t*)out) = *(uint16_t*)(packet->data + *readPos);
+        *((uint16_t*)out) = *(uint16_t*)(packet->data + *read_pos);
         break;
     case PKT_F_UINT32:
-        *((uint32_t*)out) = *(uint32_t*)(packet->data + *readPos);
+        *((uint32_t*)out) = *(uint32_t*)(packet->data + *read_pos);
         break;
     case PKT_F_UINT64:
-        *((uint64_t*)out) = *(uint64_t*)(packet->data + *readPos);
+        *((uint64_t*)out) = *(uint64_t*)(packet->data + *read_pos);
         break;
     default:
         return PKT_PARSE_UNKNOWN_FIELD_TYPE;
     }
 
-    *readPos += fieldSize;
+    *read_pos += field_size;
     return PKT_PARSE_OK;
 }
 
-static size_t getSizeOfType(int fieldType)
+static size_t get_size_of_type(int file_type)
 {
-    switch (fieldType) {
+    switch (file_type) {
     case PKT_F_UINT8:  return sizeof(uint8_t);
     case PKT_F_UINT16: return sizeof(uint16_t);
     case PKT_F_UINT32: return sizeof(uint32_t);
@@ -193,9 +193,9 @@ static size_t getSizeOfType(int fieldType)
     }
 }
 
-const char *getParseStatusString(PacketParseStatus parseStatus)
+const char *get_parse_status_string(PacketParseStatus parse_status)
 {
-    switch (parseStatus) {
+    switch (parse_status) {
     case PKT_PARSE_OK:
         return "ok";
     case PKT_PARSE_SIZE_MISMATCH:
@@ -211,23 +211,23 @@ const char *getParseStatusString(PacketParseStatus parseStatus)
     }
 }
 
-uint16_t tlPacketGetID(TLPacket *packet)
+uint16_t tl_packet_get_id(TLPacket *packet)
 {
     return packet->id & 0xFFFF;
 }
 
-uint16_t tlPacketGetGen(TLPacket *packet)
+uint16_t tl_packet_get_gen(TLPacket *packet)
 {
     return packet->id >> 16;
 }
 
-void tlPacketSetID(TLPacket *packet, uint16_t id)
+void tl_packet_set_id(TLPacket *packet, uint16_t id)
 {
     packet->id &= ~0xFFFF;
     packet->id |= id;
 }
 
-void tlPacketSetGen(TLPacket *packet, uint16_t gen)
+void tl_packet_set_gen(TLPacket *packet, uint16_t gen)
 {
     packet->id &= ~0xFFFF0000;
     packet->id |= (gen << 16);

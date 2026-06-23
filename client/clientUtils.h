@@ -6,13 +6,13 @@
 #include <tlPacket.h>
 #include <ws2tcpip.h>
 
-extern SOCKET socketServer;
+extern SOCKET socket_server;
 
-extern HANDLE socketServerMutex;
-extern HANDLE socketThreadRunMutex;
+extern HANDLE socket_server_mutex;
+extern HANDLE socket_thread_run_mutex;
 
-extern HANDLE notificationsSemaphore;
-extern HANDLE notificationThreadRunMutex;
+extern HANDLE notifications_semaphore;
+extern HANDLE notification_thread_run_mutex;
 
 typedef struct sSendMessageThreadArg
 {
@@ -21,11 +21,11 @@ typedef struct sSendMessageThreadArg
     Contact *contact;
 } SendMessageThreadArg;
 
-void    initClientUtils();
-fd_set  waitForSeverRespond(SOCKET server, struct timeval *timeout);
-void    socketThread(void*);
-void    sendMessageThread(void *args);
+void    init_client_utils();
+fd_set  wait_for_sever_respond(SOCKET server, struct timeval *timeout);
+void    socket_thread(void*);
+void    send_message_thread(void *args);
 
-void printStatusErrorMessage(ServerRespond packetStatus);
+void print_status_error_message(ServerRespond packet_status);
 
 #endif //RADIKCHAT_CLIENTUTILS_H

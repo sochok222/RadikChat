@@ -5,99 +5,99 @@
 #include <conio.h>
 #include <string.h>
 
-static int consoleWidth, consoleHeight;
-static int maxChars;
-static inline void setInputCursorPos(void);
+static int console_width, console_height;
+static int max_chars;
+static inline void set_input_cursor_pos(void);
 
-void initInput(int width, int height)
+void init_input(int width, int height)
 {
-    maxChars = width - 2;
-    consoleWidth = width;
-    consoleHeight = height;
+    max_chars = width - 2;
+    console_width = width;
+    console_height = height;
 }
 
-char *readInput()
+char *read_input()
 {
-    static char inputBuffer[512];
-    int inputPos = 0;
+    static char input_buffer[512];
+    int input_pos = 0;
     int ch;
 
-    clearTextInputBar();
-    drawTextInputBar();
-    setInputCursorPos();
+    clear_text_input_bar();
+    draw_text_input_bar();
+    set_input_cursor_pos();
     while (true) {
         if (_kbhit()) {
             switch (ch = getch()) {
             case 8: /* backspace */
-                if (inputPos > 0) {
-                    inputPos--;
-                    inputBuffer[inputPos] = '\0';
-                    writeToInputLine(inputBuffer);
+                if (input_pos > 0) {
+                    input_pos--;
+                    input_buffer[input_pos] = '\0';
+                    write_to_input_line(input_buffer);
                 }
                 break;
             case 13: case 10: /* enter key */
-                inputBuffer[inputPos] = 0x0;
-                clearTextInputBar();
-                return inputBuffer;
+                input_buffer[input_pos] = 0x0;
+                clear_text_input_bar();
+                return input_buffer;
             default:
-                if (inputPos < getConsoleWidth()) {
-                    inputBuffer[inputPos++] = ch;
-                    inputBuffer[inputPos] = '\0';
-                    writeToInputLine(inputBuffer);
+                if (input_pos < get_console_width()) {
+                    input_buffer[input_pos++] = ch;
+                    input_buffer[input_pos] = '\0';
+                    write_to_input_line(input_buffer);
                 } else {
-                    printError("Limit of characters");
+                    print_error("Limit of characters");
                 }
             }
         }
     }
 }
 
-void readInBuffer(char *buffer, int bufferSize)
+void read_in_buffer(char *buffer, int buffer_size)
 {
-    int inputPos = 0;
+    int input_pos = 0;
     int ch;
 
-    if (bufferSize == 1) {
+    if (buffer_size == 1) {
         fseek(stdin, 0, SEEK_END);
         *buffer = getch();
         return;
     }
 
-    clearTextInputBar();
-    drawTextInputBar();
-    setInputCursorPos();
+    clear_text_input_bar();
+    draw_text_input_bar();
+    set_input_cursor_pos();
     while (true) {
         if (_kbhit()) {
             switch (ch = getch()) {
             case 8: /* backspace */
-                if (inputPos > 0) {
-                    inputPos--;
-                    buffer[inputPos] = '\0';
-                    writeToInputLine(buffer);
+                if (input_pos > 0) {
+                    input_pos--;
+                    buffer[input_pos] = '\0';
+                    write_to_input_line(buffer);
                 }
                 break;
             case 13: case 10: /* enter key */
-                buffer[inputPos] = 0x0;
-                clearTextInputBar();
+                buffer[input_pos] = 0x0;
+                clear_text_input_bar();
                 return;
             default:
-                if (inputPos < bufferSize - 1) {
-                    buffer[inputPos++] = ch;
-                    buffer[inputPos] = '\0';
-                    writeToInputLine(buffer);
+                if (input_pos < buffer_size - 1) {
+                    buffer[input_pos++] = ch;
+                    buffer[input_pos] = '\0';
+                    write_to_input_line(buffer);
                 } else {
-                    printError("Limit of characters");
+                    print_error("Limit of characters");
                 }
             }
         }
     }
 }
 
-int readChar(bool echo)
+int read_char(bool echo)
 {
     int ch;
 
-    clearTextInputBar();
+    clear_text_input_bar();
     while (true) {
         if (_kbhit()) {
             ch = getch();
@@ -108,7 +108,7 @@ int readChar(bool echo)
     }
 }
 
-static void setInputCursorPos(void)
+static void set_input_cursor_pos(void)
 {
-    setPos(consoleHeight - 1, 2);
+    set_pos(console_height - 1, 2);
 }

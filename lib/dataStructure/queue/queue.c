@@ -2,19 +2,18 @@
 #include <stddef.h>
 #include <stdlib.h>
 
-void initQueue(Queue *queue)
+void init_queue(Queue *queue)
 {
     queue->front = NULL;
     queue->back = NULL;
 }
 
-bool isQueueEmpty(Queue *queue)
+bool is_queue_empty(Queue *queue)
 {
-    bool isEmpty = queue->back == NULL;
-    return isEmpty;
+    return queue->back == NULL;
 }
 
-bool pushToQueue(Queue *queue, int value)
+bool push_to_queue(Queue *queue, int value)
 {
     QueueNode *newNode = malloc(sizeof(*newNode));
     if (newNode == NULL) {
@@ -33,7 +32,7 @@ bool pushToQueue(Queue *queue, int value)
     return true;
 }
 
-int popFromQueue(Queue *queue)
+int pop_from_queue(Queue *queue)
 {
     if (queue->back == NULL) {
         return -1;

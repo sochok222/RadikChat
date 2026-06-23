@@ -9,7 +9,7 @@
  * socktype must be SOCK_STREAM or SOCK_DGRAM;             *
  * Returns INVALID_SOCKET on failure.                      *
  ***********************************************************/
-SOCKET createActiveSocket(const char *host, const char *port, int socktype);
+SOCKET create_active_socket(const char *host, const char *port, int socktype);
 
 /***********************************************************
  * Creates socket;                                         * 
@@ -19,6 +19,6 @@ SOCKET createActiveSocket(const char *host, const char *port, int socktype);
  * backlog length of the queue of pending connections      *
  * Returns INVALID_SOCKET on failure.                      *
  ***********************************************************/
-SOCKET createPassiveSocket(const char *port, int socktype, int family, int backlog);
+SOCKET create_passive_socket(const char *port, int socktype, int family, int backlog);
 
 #endif /* SOCKET_UTILS_H */

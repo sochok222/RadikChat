@@ -2,25 +2,25 @@
 #include <debug.h>
 #include "client.h"
 
-static void initChatHistory(ChatHistory *chatHistory);
+static void init_chat_history(ChatHistory *chat_history);
 
-Contact *createContact(const char *nickname)
+Contact *create_contact(const char *nickname)
 {
     Contact *contact;
 
     contact = malloc(sizeof(*contact));
-    initChatHistory(&contact->chatHistory);
+    init_chat_history(&contact->chat_history);
     contact->unread = 0;
     contact->nickname = malloc(strlen(nickname) + 1);
     strcpy(contact->nickname, nickname);
 
     contact->next = contacts;
     contacts = contact;
-    appData.contactCount++;
+    app_data.contact_count++;
     return contact;
 }
 
-Contact *findContact(const char *nickname)
+Contact *find_contact(const char *nickname)
 {
     DBG_FUNC();
     Contact *p = contacts;
@@ -35,7 +35,7 @@ Contact *findContact(const char *nickname)
     return NULL;
 }
 
-void deleteContact(const char *nickname)
+void delete_contact(const char *nickname)
 {
     DBG_FUNC();
     Contact **p = &contacts;
@@ -51,36 +51,36 @@ void deleteContact(const char *nickname)
     DBG_ERROR("Contact not found");
 }
 
-static void initChatHistory(ChatHistory *chatHistory)
+static void init_chat_history(ChatHistory *chat_history)
 {
-    chatHistory->messages = 0;
-    chatHistory->head = NULL;
+    chat_history->messages = 0;
+    chat_history->head = NULL;
 }
 
-Message *addMessage(Contact *contact, const char *message, bool sender, MessageState state)
+Message *add_message(Contact *contact, const char *message, bool sender, MessageState state)
 {
     DBG_FUNC();
-    Message *it = contact->chatHistory.head;
-    Message *newMessage = malloc(sizeof(*newMessage));
+    Message *it = contact->chat_history.head;
+    Message *new_message = malloc(sizeof(*new_message));
 
     while (it != NULL && it->next != NULL)
         it = it->next;
     if (it != NULL)
-        it->next = newMessage;
+        it->next = new_message;
     else
-        contact->chatHistory.head = newMessage;
+        contact->chat_history.head = new_message;
 
-    newMessage->text = malloc(strlen(message) + 1);
-    strcpy(newMessage->text, message);
-    newMessage->next = NULL;
-    newMessage->sender = sender;
-    newMessage->state = state;
-    contact->chatHistory.messages++;
-    SetEvent(appData.messageEvent);
-    return newMessage;
+    new_message->text = malloc(strlen(message) + 1);
+    strcpy(new_message->text, message);
+    new_message->next = NULL;
+    new_message->sender = sender;
+    new_message->state = state;
+    contact->chat_history.messages++;
+    SetEvent(app_data.message_event);
+    return new_message;
 }
 
-int contactCount()
+int contact_count()
 {
     DBG_FUNC();
     Contact *p = contacts;

@@ -18,34 +18,34 @@ typedef struct sPerIOContext
     WSAOVERLAPPED   overlapped;
     char            buffer[MAX_BUFFER_SIZE];
     WSABUF          wsabuf;
-    uint32_t        totalBytes;
-    DWORD           sentBytes;
-    IO_Operation    IOOperation;
-    SOCKET          socketAccept;
-    TLPacket        *tlPacket;
+    uint32_t        total_bytes;
+    DWORD           sent_bytes;
+    IO_Operation    io_operation;
+    SOCKET          socket_accept;
+    TLPacket        *tl_packet;
 
-    struct sPerIOContext *IOContextForward;
+    struct sPerIOContext *io_context_forward;
 } PerIOContext;
 
 typedef struct sPerSocketContext {
-    SOCKET                      Socket;
+    SOCKET                      socket;
     char                        *nickname;
-    PerIOContext                *pIOContext;
-    CRITICAL_SECTION            IOCriticalSection;
-    struct sPerSocketContext    *pCtxtBack;
-    struct sPerSocketContext    *pCtxtForward;
+    PerIOContext                *io_context;
+    CRITICAL_SECTION            io_critical_section;
+    struct sPerSocketContext    *ctxt_back;
+    struct sPerSocketContext    *ctxt_forward;
 } PerSocketContext;
 
 extern PerSocketContext *g_clients;
 
-DWORD WINAPI        workerThread(LPVOID arg);
-PerSocketContext    *updateCompletionPort(SOCKET s, IO_Operation clientIO, bool addToList);
-void                closeClient(PerSocketContext *perSocketContext, bool graceful);
-PerSocketContext    *allocateSocketContext(SOCKET s, IO_Operation clientIO);
-PerIOContext        *allocateIOContext();
-void                freeSocketContextList();
-void                addToSocketContextList(PerSocketContext *perSocketContext);
-void                deleteFromSocketContextList(PerSocketContext *perSocketContext);
-void                deleteIOContext(PerIOContext *perIOContext);
+DWORD WINAPI        worker_thread(LPVOID arg);
+PerSocketContext    *update_completion_port(SOCKET s, IO_Operation client_io, bool add_to_list);
+void                close_client(PerSocketContext *per_socket_context, bool graceful);
+PerSocketContext    *allocate_socket_context(SOCKET s, IO_Operation client_io);
+PerIOContext        *allocate_io_context();
+void                free_socket_context_list();
+void                add_to_socket_context_list(PerSocketContext *per_socket_context);
+void                delete_from_socket_context_list(PerSocketContext *per_socket_context);
+void                delete_io_context(PerIOContext *per_io_context);
 
 #endif //RADIKCHAT_SERVER_H

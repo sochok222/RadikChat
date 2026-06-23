@@ -7,24 +7,24 @@
 #include <stdio.h>
 #include <synchapi.h>
 
-#define printSuccess(...) printNotification(formatSuccess, __VA_ARGS__)
-#define printError(...) printNotification(formatError, __VA_ARGS__)
+#define printSuccess(...) print_notification(formatSuccess, __VA_ARGS__)
+#define print_error(...) print_notification(formatError, __VA_ARGS__)
 
-void initOutput(int width, int height);
-int  getMainAreaHeight(void);
-void colorfulPrintf(TextFormat color, const char *format, ...);
-void colorfulVPrintf(TextFormat color, const char *format, va_list args);
-void printRequest(const char *format, ...);
-void clearRequest(void);
-void printNotification(TextFormat textFormat, const char *format, ...);
+void init_output(int width, int height);
+int  get_main_area_height(void);
+void colorful_printf(TextFormat color, const char *format, ...);
+void colorful_v_printf(TextFormat color, const char *format, va_list args);
+void print_request(const char *format, ...);
+void clear_request(void);
+void print_notification(TextFormat text_format, const char *format, ...);
 void clearNotificationBar(void);
-void drawTextInputBar(void);
-void clearTextInputBar(void);
-void printChatHistory(ChatHistory history, int startFrom);
-void printContactName(const char *format, ...);
-void printContacts(Contact *contact, int startFrom);
-void writeToInputLine(const char *buffer);
-void clearScreen(void);
-void consoleDrawThread(void *);
+void draw_text_input_bar(void);
+void clear_text_input_bar(void);
+void print_chat_history(ChatHistory history, int start_from);
+void print_contact_name(const char *format, ...);
+void print_contacts(Contact *contact, int start_from);
+void write_to_input_line(const char *buffer);
+void clear_screen(void);
+void console_draw_thread(void *);
 
 #endif //RADIKCHAT_CONSOLEOUTPUT_H

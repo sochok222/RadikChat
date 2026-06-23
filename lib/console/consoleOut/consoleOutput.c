@@ -8,195 +8,195 @@
 #include <stdio.h>
 #include <windows.h>
 
-#define REQUEST_POS consoleHeight - 1, 0
+#define REQUEST_POS console_height - 1, 0
 #define ESC "\x1b"
 #define CSI "\x1b["
-#define calcPos(row, col) ((row) * (consoleWidth) + (col))
+#define calcPos(row, col) ((row) * (console_width) + (col))
 
-static int consoleWidth, consoleHeight;
-static int mainAreaStart, mainAreaEnd;
-static char *consoleBuffer;
-static HANDLE hStdOut;
-static HANDLE consoleOutMutex;
-static HANDLE consoleOutSemaphore;
+static int console_width, console_height;
+static int main_area_start, main_area_end;
+static char *console_buffer;
+static HANDLE h_std_out;
+static HANDLE console_out_mutex;
+static HANDLE console_out_semaphore;
 
-static void writeToConsoleBuffer(const char *data, size_t size, int row, int col, bool updateScreen);
-static void vprintToConsoleBuffer(int row, int col, const char *format, va_list args);
-static void printToConsoleBuffer(int row, int col, const char *format, ...);
-static void clearBufferLine(int row, int col);
-static void clearLine(int row, int col);
-static void drawSeparatorLine(int row, int col, bool updateScreen);
-static void redrawConsole(void);
+static void write_to_console_buffer(const char *data, size_t size, int row, int col, bool update_screen);
+static void vprint_to_console_buffer(int row, int col, const char *format, va_list args);
+static void print_to_console_buffer(int row, int col, const char *format, ...);
+static void clear_buffer_line(int row, int col);
+static void clear_line(int row, int col);
+static void draw_separator_line(int row, int col, bool update_screen);
+static void redraw_console(void);
 
-void initOutput(int width, int height)
+void init_output(int width, int height)
 {
-    hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
-    consoleOutMutex = CreateMutex(NULL, FALSE, NULL);
-    consoleOutSemaphore = CreateSemaphore(NULL, 0, 100, NULL);
-    consoleWidth = width;
-    consoleHeight = height;
+    h_std_out = GetStdHandle(STD_OUTPUT_HANDLE);
+    console_out_mutex = CreateMutex(NULL, FALSE, NULL);
+    console_out_semaphore = CreateSemaphore(NULL, 0, 100, NULL);
+    console_width = width;
+    console_height = height;
 
-    mainAreaStart = 1;
-    mainAreaEnd = consoleHeight - 1 - 2;
+    main_area_start = 1;
+    main_area_end = console_height - 1 - 2;
 
-    consoleBuffer = calloc(consoleWidth * consoleHeight, sizeof(char));
+    console_buffer = calloc(console_width * console_height, sizeof(char));
 }
 
-int getMainAreaHeight(void)
+int get_main_area_height(void)
 {
     // Main are height - border height
-    return mainAreaEnd - mainAreaStart - 2;
+    return main_area_end - main_area_start - 2;
 }
 
-void colorfulPrintf(TextFormat color, const char *format, ...)
+void colorful_printf(TextFormat color, const char *format, ...)
 {
     va_list args;
 
-    WaitForSingleObject(consoleOutMutex, INFINITE);
-    setTextColor(color);
+    WaitForSingleObject(console_out_mutex, INFINITE);
+    set_text_color(color);
     va_start(args, format);
     vprintf(format, args);
     va_end(args);
-    setTextColor(formatDefault);
-    ReleaseMutex(consoleOutMutex);
+    set_text_color(formatDefault);
+    ReleaseMutex(console_out_mutex);
 }
 
-void colorfulVPrintf(TextFormat color, const char *format, va_list args)
+void colorful_v_printf(TextFormat color, const char *format, va_list args)
 {
-    WaitForSingleObject(consoleOutMutex, INFINITE);
-    setTextColor(color);
+    WaitForSingleObject(console_out_mutex, INFINITE);
+    set_text_color(color);
     vprintf(format, args);
-    setTextColor(formatDefault);
-    ReleaseMutex(consoleOutMutex);
+    set_text_color(formatDefault);
+    ReleaseMutex(console_out_mutex);
 }
 
-void printRequest(const char *format, ...)
+void print_request(const char *format, ...)
 {
     va_list args;
 
-    clearRequest();
+    clear_request();
     va_start(args, format);
-    vprintToConsoleBuffer(consoleHeight - 2, 0, format, args);
+    vprint_to_console_buffer(console_height - 2, 0, format, args);
     va_end(args);
 }
 
-void clearRequest()
+void clear_request()
 {
-    clearLine(consoleHeight - 2, 0);
+    clear_line(console_height - 2, 0);
 }
 
-void printNotification(TextFormat textFormat, const char *format, ...)
+void print_notification(TextFormat text_format, const char *format, ...)
 {
     va_list args;
 
-    writeToConsoleBuffer("Last Notification: ", strlen("Last Notification: "), 0, 0, true);
+    write_to_console_buffer("Last Notification: ", strlen("Last Notification: "), 0, 0, true);
     va_start(args, format);
-    vprintToConsoleBuffer(0, strlen("Last Notification: "), format, args);
+    vprint_to_console_buffer(0, strlen("Last Notification: "), format, args);
     va_end(args);
 }
 
 void clearNotificationBar(void)
 {
-    clearLine(0, 0);
+    clear_line(0, 0);
 }
 
-void drawTextInputBar(void)
+void draw_text_input_bar(void)
 {
-    writeToConsoleBuffer(">", 1, consoleHeight - 1, 0, true);
+    write_to_console_buffer(">", 1, console_height - 1, 0, true);
 }
 
-void clearTextInputBar(void)
+void clear_text_input_bar(void)
 {
-    clearLine(consoleHeight - 1, 0);
+    clear_line(console_height - 1, 0);
 }
 
-void clearScreen(void)
+void clear_screen(void)
 {
-    WaitForSingleObject(consoleOutMutex, INFINITE);
-    memset(consoleBuffer, 0, consoleWidth * consoleHeight);
-    ReleaseMutex(consoleOutMutex);
-    ReleaseSemaphore(consoleOutSemaphore, 1, NULL);
+    WaitForSingleObject(console_out_mutex, INFINITE);
+    memset(console_buffer, 0, console_width * console_height);
+    ReleaseMutex(console_out_mutex);
+    ReleaseSemaphore(console_out_semaphore, 1, NULL);
 }
 
-void printChatHistory(ChatHistory history, int startFrom)
+void print_chat_history(ChatHistory history, int start_from)
 {
     int i = 0;
-    WaitForSingleObject(consoleOutMutex, INFINITE);
-    if (startFrom <= 0 && startFrom > history.messages)
+    WaitForSingleObject(console_out_mutex, INFINITE);
+    if (start_from <= 0 && start_from > history.messages)
         return;
 
-    if (getMainAreaHeight() < history.messages) {
-        for (int i = 0; i < history.messages - getMainAreaHeight() - startFrom; i++) {
+    if (get_main_area_height() < history.messages) {
+        for (int i = 0; i < history.messages - get_main_area_height() - start_from; i++) {
             history.head = history.head->next;
         }
     }
 
-    drawSeparatorLine(mainAreaStart + 1, 0, false);
-    drawSeparatorLine(mainAreaEnd, 0, false);
+    draw_separator_line(main_area_start + 1, 0, false);
+    draw_separator_line(main_area_end, 0, false);
 
     // Clear chat frame
-    for (i = mainAreaStart + 2; history.head != NULL && i < mainAreaEnd; i++)
-        clearBufferLine(i, 0);
+    for (i = main_area_start + 2; history.head != NULL && i < main_area_end; i++)
+        clear_buffer_line(i, 0);
 
     // Print messages
-    for (i = mainAreaStart + 2; history.head != NULL && i < mainAreaEnd; i++) {
+    for (i = main_area_start + 2; history.head != NULL && i < main_area_end; i++) {
         int spacing = 0;
-        writeToConsoleBuffer(history.head->sender == true ? "You:" : "Contact:",
+        write_to_console_buffer(history.head->sender == true ? "You:" : "Contact:",
             history.head->sender ? strlen("You:") : strlen("Contact:"), i, spacing, false);
         spacing += history.head->sender ? strlen("You:") : strlen("Contact:") + 2;
-        writeToConsoleBuffer(history.head->text, strlen(history.head->text), i,
+        write_to_console_buffer(history.head->text, strlen(history.head->text), i,
             spacing, false);
         spacing += strlen(history.head->text) + 1;
 
         if (history.head->state == MESSAGE_SEND_PENDING)
-            writeToConsoleBuffer("(+)", strlen("(+)"), i, spacing, false);
+            write_to_console_buffer("(+)", strlen("(+)"), i, spacing, false);
         else if (history.head->state == MESSAGE_SEND_SUCCESS)
-            writeToConsoleBuffer("(++)", strlen("(++)"), i, spacing, false);
+            write_to_console_buffer("(++)", strlen("(++)"), i, spacing, false);
         else
-            writeToConsoleBuffer("(not sent)", strlen("(not sent)"), i, spacing, false);
+            write_to_console_buffer("(not sent)", strlen("(not sent)"), i, spacing, false);
 
         history.head = history.head->next;
     }
-    ReleaseMutex(consoleOutMutex);
-    redrawConsole();
+    ReleaseMutex(console_out_mutex);
+    redraw_console();
 }
 
-void printContactName(const char *format, ...)
+void print_contact_name(const char *format, ...)
 {
-    clearLine(mainAreaStart, 0);
+    clear_line(main_area_start, 0);
     va_list args;
     va_start(args, format);
-    vprintToConsoleBuffer(mainAreaStart, 0, format, args);
+    vprint_to_console_buffer(main_area_start, 0, format, args);
     va_end(args);
 }
 
-void printContacts(Contact *contact, int startFrom)
+void print_contacts(Contact *contact, int start_from)
 {
     int i = 0;
-    int startPos = mainAreaStart + 1;
+    int start_pos = main_area_start + 1;
 
     if (contact == NULL)
         return;
 
-    for (; i < startFrom; i++) {
+    for (; i < start_from; i++) {
         contact = contact->next;
     }
 
-    // TODO optimize this like in printChatHistory
-    drawSeparatorLine(mainAreaStart, 0, true);
-    drawSeparatorLine(mainAreaEnd, 0, true);
-    for (i = startPos; contact != NULL && i < mainAreaEnd; i++) {
-        printToConsoleBuffer(i, 0, "%d - %s", startFrom++, contact->nickname);
+    // TODO optimize this like in print_chat_history
+    draw_separator_line(main_area_start, 0, true);
+    draw_separator_line(main_area_end, 0, true);
+    for (i = start_pos; contact != NULL && i < main_area_end; i++) {
+        print_to_console_buffer(i, 0, "%d - %s", start_from++, contact->nickname);
         contact = contact->next;
     }
 }
 
-void writeToInputLine(const char *buffer)
+void write_to_input_line(const char *buffer)
 {
-    writeToConsoleBuffer(buffer, strlen(buffer), consoleHeight - 1, 2, true);
+    write_to_console_buffer(buffer, strlen(buffer), console_height - 1, 2, true);
 }
 
-void consoleDrawThread(void *)
+void console_draw_thread(void *)
 {
     DWORD written;
     COORD pos = {0, 0};
@@ -205,80 +205,80 @@ void consoleDrawThread(void *)
     SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
 
     while (true) {
-        WaitForSingleObject(consoleOutSemaphore, INFINITE);
-        WaitForSingleObject(consoleOutMutex, INFINITE);
-        setPos(0, 0);
+        WaitForSingleObject(console_out_semaphore, INFINITE);
+        WaitForSingleObject(console_out_mutex, INFINITE);
+        set_pos(0, 0);
         WriteConsoleOutputCharacterA(
-            hStdOut,
-            consoleBuffer,
-            consoleWidth * consoleHeight,
+            h_std_out,
+            console_buffer,
+            console_width * console_height,
             pos,
             &written
         );
-        ReleaseMutex(consoleOutMutex);
+        ReleaseMutex(console_out_mutex);
     }
     _endthread();
 }
 
-static void writeToConsoleBuffer(const char *data, size_t size, int row, int col, bool updateScreen)
+static void write_to_console_buffer(const char *data, size_t size, int row, int col, bool update_screen)
 {
-    WaitForSingleObject(consoleOutMutex, INFINITE);
-    if (col < consoleWidth && row < consoleHeight) {
-        memset(consoleBuffer + calcPos(row, col), 0, consoleWidth);
-        memcpy(consoleBuffer + calcPos(row, col), data, min(size, consoleWidth - col));
+    WaitForSingleObject(console_out_mutex, INFINITE);
+    if (col < console_width && row < console_height) {
+        memset(console_buffer + calcPos(row, col), 0, console_width);
+        memcpy(console_buffer + calcPos(row, col), data, min(size, console_width - col));
     }
-    ReleaseMutex(consoleOutMutex);
-    if (updateScreen)
-        ReleaseSemaphore(consoleOutSemaphore, 1, NULL);
+    ReleaseMutex(console_out_mutex);
+    if (update_screen)
+        ReleaseSemaphore(console_out_semaphore, 1, NULL);
 }
 
-static void vprintToConsoleBuffer(int row, int col, const char *format, va_list args)
+static void vprint_to_console_buffer(int row, int col, const char *format, va_list args)
 {
-    WaitForSingleObject(consoleOutMutex, INFINITE);
-    if (col < consoleWidth && row < consoleHeight) {
-        vsnprintf(consoleBuffer + calcPos(row, col), consoleWidth - col, format, args);
+    WaitForSingleObject(console_out_mutex, INFINITE);
+    if (col < console_width && row < console_height) {
+        vsnprintf(console_buffer + calcPos(row, col), console_width - col, format, args);
     }
-    ReleaseMutex(consoleOutMutex);
-    ReleaseSemaphore(consoleOutSemaphore, 1, NULL);
+    ReleaseMutex(console_out_mutex);
+    ReleaseSemaphore(console_out_semaphore, 1, NULL);
 }
 
-static void printToConsoleBuffer(int row, int col, const char *format, ...)
+static void print_to_console_buffer(int row, int col, const char *format, ...)
 {
     va_list args;
     va_start(args, format);
-    vprintToConsoleBuffer(row, col, format, args);
+    vprint_to_console_buffer(row, col, format, args);
     va_end(args);
 }
 
-static void clearBufferLine(int row, int col)
+static void clear_buffer_line(int row, int col)
 {
-    if (col < consoleWidth && row < consoleHeight) {
-        memset(consoleBuffer + calcPos(row, col), 0, consoleWidth - col);
+    if (col < console_width && row < console_height) {
+        memset(console_buffer + calcPos(row, col), 0, console_width - col);
     }
 }
 
-static void clearLine(int row, int col)
+static void clear_line(int row, int col)
 {
-    WaitForSingleObject(consoleOutMutex, INFINITE);
-    if (col < consoleWidth && row < consoleHeight) {
-        memset(consoleBuffer + calcPos(row, col), 0, consoleWidth - col);
+    WaitForSingleObject(console_out_mutex, INFINITE);
+    if (col < console_width && row < console_height) {
+        memset(console_buffer + calcPos(row, col), 0, console_width - col);
     }
-    ReleaseMutex(consoleOutMutex);
-    ReleaseSemaphore(consoleOutSemaphore, 1, NULL);
+    ReleaseMutex(console_out_mutex);
+    ReleaseSemaphore(console_out_semaphore, 1, NULL);
 }
 
-static void drawSeparatorLine(int row, int col, bool updateScreen)
+static void draw_separator_line(int row, int col, bool update_screen)
 {
-    WaitForSingleObject(consoleOutMutex, INFINITE);
-    if (col < consoleWidth && row < consoleHeight) {
-        memset(consoleBuffer + calcPos(row, col), '-', consoleWidth - col);
+    WaitForSingleObject(console_out_mutex, INFINITE);
+    if (col < console_width && row < console_height) {
+        memset(console_buffer + calcPos(row, col), '-', console_width - col);
     }
-    ReleaseMutex(consoleOutMutex);
-    if (updateScreen)
-        ReleaseSemaphore(consoleOutSemaphore, 1, NULL);
+    ReleaseMutex(console_out_mutex);
+    if (update_screen)
+        ReleaseSemaphore(console_out_semaphore, 1, NULL);
 }
 
-static void redrawConsole(void)
+static void redraw_console(void)
 {
-    ReleaseSemaphore(consoleOutSemaphore, 1, NULL);
+    ReleaseSemaphore(console_out_semaphore, 1, NULL);
 }

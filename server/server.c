@@ -18,27 +18,27 @@
 #define MAX_THREAD_HANDLES 100
 #define BACKLOG 10
 
-SOCKET              g_socketListen;
-CRITICAL_SECTION    g_criticalSection;
-DWORD               g_threadCount;
-HANDLE              g_threadHandles[MAX_THREAD_HANDLES];
-HANDLE              g_IOCP;
+SOCKET              g_socket_listen;
+CRITICAL_SECTION    g_critical_section;
+DWORD               g_thread_count;
+HANDLE              g_thread_handles[MAX_THREAD_HANDLES];
+HANDLE              g_iocp;
 PerSocketContext    *g_clients = NULL;
-bool                g_shutDown = false;
+bool                g_shut_down = false;
 
 int _cdecl main(int argc, char **argv)
 {
-    initDebug(NULL);
-    setAlternateConsoleBuffer(true);
-    enableVirtualProcessing(true);
+    init_debug(NULL);
+    set_alternate_console_buffer(true);
+    enable_virtual_processing(true);
     DBG_INFO("Starting server...");
     WSADATA wsadata;
-    SYSTEM_INFO systemInfo;
-    SOCKET acceptSocket;
-    PerSocketContext *perSocketContext = NULL;
-    DWORD recvNumBytes = 0;
+    SYSTEM_INFO system_info;
+    SOCKET accept_socket;
+    PerSocketContext *per_socket_context = NULL;
+    DWORD recv_num_bytes = 0;
     DWORD flags = 0;
-    int nRet = 0;
+    int n_ret = 0;
 
     DBG_DEBUG("Initializing winsock...");
     if (WSAStartup(MAKEWORD(2, 2), &wsadata) != 0) {
@@ -46,86 +46,86 @@ int _cdecl main(int argc, char **argv)
         return 1;
     }
 
-    GetSystemInfo(&systemInfo);
-    g_threadCount = systemInfo.dwNumberOfProcessors * 2;
+    GetSystemInfo(&system_info);
+    g_thread_count = system_info.dwNumberOfProcessors * 2;
 
-    InitializeCriticalSection(&g_criticalSection);
+    InitializeCriticalSection(&g_critical_section);
 
     for (int i = 0; i < MAX_THREAD_HANDLES; i++) {
-        g_threadHandles[i] = INVALID_HANDLE_VALUE;
+        g_thread_handles[i] = INVALID_HANDLE_VALUE;
     }
 
-    g_IOCP = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
-    if (g_IOCP == INVALID_HANDLE_VALUE) {
+    g_iocp = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
+    if (g_iocp == INVALID_HANDLE_VALUE) {
         DBG_FATAL("CreateIoCompletionPort() failed to create completion port: %d", GetLastError());
         return 1;
     }
 
     // Create worker threads that will service overlapped IO packets
-    DBG_DEBUG("Creating %d threads...", g_threadCount);
-    for (DWORD i = 0; i < g_threadCount; i++) {
-        g_threadHandles[i] = CreateThread(NULL, 0, workerThread, g_IOCP, 0, NULL);
-        if (g_threadHandles[i] == INVALID_HANDLE_VALUE) {
+    DBG_DEBUG("Creating %d threads...", g_thread_count);
+    for (DWORD i = 0; i < g_thread_count; i++) {
+        g_thread_handles[i] = CreateThread(NULL, 0, worker_thread, g_iocp, 0, NULL);
+        if (g_thread_handles[i] == INVALID_HANDLE_VALUE) {
             DBG_FATAL("CreateThread() failed to create thread: %d", GetLastError());
             return 1;
         }
     }
 
-    g_socketListen = createPassiveSocket(PORT, SOCK_STREAM, AF_INET, BACKLOG);
-    if (g_socketListen == INVALID_SOCKET) {
-        DBG_FATAL("createPassiveSocket() failed to create socket: %d", GetLastError());
+    g_socket_listen = create_passive_socket(PORT, SOCK_STREAM, AF_INET, BACKLOG);
+    if (g_socket_listen == INVALID_SOCKET) {
+        DBG_FATAL("create_passive_socket() failed to create socket: %d", GetLastError());
         return 1;
     }
 
     // Loop forever to accept incoming connections
     while (true) {
-        acceptSocket = WSAAccept(g_socketListen, NULL, NULL, NULL, 0);
-        if (acceptSocket == INVALID_SOCKET) {
+        accept_socket = WSAAccept(g_socket_listen, NULL, NULL, NULL, 0);
+        if (accept_socket == INVALID_SOCKET) {
             DBG_FATAL("WSAAccept() failed to create accept_socket: %d", GetLastError());
             return 1;
         }
 
         // Add returned socket to the IOCP; allocate and add context
         // data to global list of context structures
-        perSocketContext = updateCompletionPort(acceptSocket, IO_OP_READ, true);
-        if (perSocketContext == NULL) {
-            DBG_FATAL("updateCompletionPort() failed to update completion port: %d", GetLastError());
+        per_socket_context = update_completion_port(accept_socket, IO_OP_READ, true);
+        if (per_socket_context == NULL) {
+            DBG_FATAL("update_completion_port() failed to update completion port: %d", GetLastError());
             return 1;
         }
 
         // Post initial receive on this socket
-        nRet = WSARecv(acceptSocket, &(perSocketContext->pIOContext->wsabuf),
-                       1, &recvNumBytes, &flags,
-                       &(perSocketContext->pIOContext->overlapped), NULL);
-        if (nRet == SOCKET_ERROR && ERROR_IO_PENDING != WSAGetLastError()) {
+        n_ret = WSARecv(accept_socket, &(per_socket_context->io_context->wsabuf),
+                       1, &recv_num_bytes, &flags,
+                       &(per_socket_context->io_context->overlapped), NULL);
+        if (n_ret == SOCKET_ERROR && ERROR_IO_PENDING != WSAGetLastError()) {
             DBG_FATAL("WSARecv() failed: %d", WSAGetLastError());
-            closeClient(perSocketContext, false);
+            close_client(per_socket_context, false);
         }
     }
 
     return 0;
 }
 
-DWORD WINAPI workerThread(LPVOID arg)
+DWORD WINAPI worker_thread(LPVOID arg)
 {
     HANDLE IOCP = (HANDLE)arg;
     bool success = false;
-    int nRet = 0;
+    int n_ret = 0;
     LPWSAOVERLAPPED overlapped = NULL;
-    PerSocketContext *perSocketContext = NULL;
-    PerIOContext *perIOContext = NULL;
-    WSABUF buffRecv;
-    WSABUF buffSend;
-    DWORD recvNumBytes = 0;
-    DWORD sendNumBytes = 0;
+    PerSocketContext *per_socket_context = NULL;
+    PerIOContext *per_io_context = NULL;
+    WSABUF buff_recv;
+    WSABUF buff_send;
+    DWORD recv_num_bytes = 0;
+    DWORD send_num_bytes = 0;
     DWORD flags = 0;
-    DWORD IOSize = 0;
-    PacketParseStatus parseStatus;
+    DWORD io_size = 0;
+    PacketParseStatus parse_status;
     ServerRespond respond;
 
     while (true) {
-        success = GetQueuedCompletionStatus(IOCP, &IOSize,
-                                            (PDWORD_PTR)&perSocketContext,
+        success = GetQueuedCompletionStatus(IOCP, &io_size,
+                                            (PDWORD_PTR)&per_socket_context,
                                             (LPOVERLAPPED *)&overlapped,
                                             INFINITE);
 
@@ -134,101 +134,101 @@ DWORD WINAPI workerThread(LPVOID arg)
             DBG_INFO("Thread (%d) GetQueuedCompletionStatus() failed: %d", GetCurrentThreadId(), GetLastError());
         }
 
-        if (perSocketContext == NULL) {
+        if (per_socket_context == NULL) {
             // PostQueuedCompletionStatus posted IO packet with
             // a NULL key. It is time to exit
             return 0;
         }
 
-        if (!success || (success && (IOSize == 0))) {
+        if (!success || (success && (io_size == 0))) {
             DBG_ERROR("Thread (%d) IOSize == 0, Error code (%d)");
-            closeClient(perSocketContext, false);
+            close_client(per_socket_context, false);
             continue;
         }
 
         // Determine what type of IO packet has completed
-        perIOContext = (PerIOContext*)overlapped;
-        switch (perIOContext->IOOperation) {
+        per_io_context = (PerIOContext*)overlapped;
+        switch (per_io_context->io_operation) {
         case IO_OP_READ: // TODO handle partial read
             // A read operation has completed, process received packet and post another action on the socket
-            DBG_INFO("Thread(%lu) received %d bytes", GetCurrentThreadId(), IOSize);
-            perIOContext->wsabuf.buf += IOSize;
-            perIOContext->wsabuf.len -= IOSize;
-            if (IOSize >= PKT_HEADER_SIZE && IOSize >= *(size_t*)(perIOContext + PKT_SIZE_OFFSET)) {
-                TLPacket *tlPacket;
-                if ((parseStatus = packetFromBytes((uint8_t*)perIOContext->buffer, &tlPacket)) != PKT_PARSE_OK) {
-                    DBG_ERROR("Failed to parse packet %s", getParseStatusString(parseStatus));
+            DBG_INFO("Thread(%lu) received %d bytes", GetCurrentThreadId(), io_size);
+            per_io_context->wsabuf.buf += io_size;
+            per_io_context->wsabuf.len -= io_size;
+            if (io_size >= PKT_HEADER_SIZE && io_size >= *(size_t*)(per_io_context + PKT_SIZE_OFFSET)) {
+                TLPacket *tl_packet;
+                if ((parse_status = packet_from_bytes((uint8_t*)per_io_context->buffer, &tl_packet)) != PKT_PARSE_OK) {
+                    DBG_ERROR("Failed to parse packet %s", get_parse_status_string(parse_status));
                     // TODO discard this packet, send respond, clear read buffer
                 }
 
-                if (tlPacket->command == CMD_LOGIN) {
+                if (tl_packet->command == CMD_LOGIN) {
                     DBG_DEBUG("Thread (%lu) received login packet", GetCurrentThreadId());
                     // Process received packet
-                    PacketServerRespond *respondPacket = processLoginPacket(tlPacket, perSocketContext);
-                    respondPacket->tlPacket->id = tlPacket->id;
+                    PacketServerRespond *respond_packet = process_login_packet(tl_packet, per_socket_context);
+                    respond_packet->tl_packet->id = tl_packet->id;
 
-                    // received tlPacket is not needed anymore
-                    deleteTLPacket(tlPacket);
+                    // received tl_packet is not needed anymore
+                    delete_tl_packet(tl_packet);
 
                     // Packing respond packet
-                    tlPackServerRespond(respondPacket);
+                    tl_pack_server_respond(respond_packet);
 
                     // Creating io context and moving packet data to its buffer
-                    PerIOContext *sendIOContext = allocateIOContext();
-                    sendIOContext->IOOperation = IO_OP_WRITE;
-                    sendIOContext->totalBytes = respondPacket->tlPacket->size;
-                    sendIOContext->sentBytes = 0;
-                    sendIOContext->wsabuf.buf = sendIOContext->buffer;
-                    sendIOContext->wsabuf.len = respondPacket->tlPacket->size;
-                    sendIOContext->tlPacket = respondPacket->tlPacket;
-                    memcpy(sendIOContext->buffer, respondPacket->tlPacket->data, respondPacket->tlPacket->size);
+                    PerIOContext *send_io_context = allocate_io_context();
+                    send_io_context->io_operation = IO_OP_WRITE;
+                    send_io_context->total_bytes = respond_packet->tl_packet->size;
+                    send_io_context->sent_bytes = 0;
+                    send_io_context->wsabuf.buf = send_io_context->buffer;
+                    send_io_context->wsabuf.len = respond_packet->tl_packet->size;
+                    send_io_context->tl_packet = respond_packet->tl_packet;
+                    memcpy(send_io_context->buffer, respond_packet->tl_packet->data, respond_packet->tl_packet->size);
 
                     // Posting send event
-                    nRet = WSASend(perSocketContext->Socket, &(sendIOContext->wsabuf), 1,
-                                   &sendNumBytes, flags, &sendIOContext->overlapped, NULL);
+                    n_ret = WSASend(per_socket_context->socket, &(send_io_context->wsabuf), 1,
+                                   &send_num_bytes, flags, &send_io_context->overlapped, NULL);
 
-                    deletePacketServerRespond(respondPacket);
+                    delete_packet_server_respond(respond_packet);
 
-                    if (nRet == SOCKET_ERROR && ERROR_IO_PENDING != WSAGetLastError()) {
+                    if (n_ret == SOCKET_ERROR && ERROR_IO_PENDING != WSAGetLastError()) {
                         DBG_ERROR("Thread(%lu) WSASend failed error(%d)", GetCurrentThreadId(), WSAGetLastError());
-                        closeClient(perSocketContext, false);
-                        deleteIOContext(sendIOContext);
+                        close_client(per_socket_context, false);
+                        delete_io_context(send_io_context);
                     }
                 }
             } else {
                 DBG_INFO("Thread(%lu) packet header contains unknown packet type. Discarding client\n", GetCurrentThreadId());
-                closeClient(perSocketContext, false);
+                close_client(per_socket_context, false);
             }
 
             // Post receive
-            WSARecv(perSocketContext->Socket, &(perSocketContext->pIOContext->wsabuf),
-                       1, &recvNumBytes, &flags,
-                       &(perSocketContext->pIOContext->overlapped), NULL);
+            WSARecv(per_socket_context->socket, &(per_socket_context->io_context->wsabuf),
+                       1, &recv_num_bytes, &flags,
+                       &(per_socket_context->io_context->overlapped), NULL);
             break;
         case IO_OP_WRITE:
-            DBG_DEBUG("Thread(%lu) sent %d bytes\n", GetCurrentThreadId(), IOSize);
-            perIOContext->IOOperation = IO_OP_WRITE;
-            perIOContext->sentBytes += IOSize;
+            DBG_DEBUG("Thread(%lu) sent %d bytes\n", GetCurrentThreadId(), io_size);
+            per_io_context->io_operation = IO_OP_WRITE;
+            per_io_context->sent_bytes += io_size;
             flags = 0;
 
-            if (perIOContext->sentBytes < perIOContext->totalBytes) {
+            if (per_io_context->sent_bytes < per_io_context->total_bytes) {
                 // Previous IO operation sent not all bytes, post another WSASend
-                buffSend.buf = perIOContext->buffer + perIOContext->sentBytes;
-                buffSend.len = perIOContext->totalBytes - perIOContext->sentBytes;
+                buff_send.buf = per_io_context->buffer + per_io_context->sent_bytes;
+                buff_send.len = per_io_context->total_bytes - per_io_context->sent_bytes;
 
-                nRet = WSASend(perSocketContext->Socket, &buffSend, 1,
-                               &sendNumBytes, flags, &perIOContext->overlapped, NULL);
-                if (nRet == SOCKET_ERROR && ERROR_IO_PENDING != WSAGetLastError()) {
+                n_ret = WSASend(per_socket_context->socket, &buff_send, 1,
+                               &send_num_bytes, flags, &per_io_context->overlapped, NULL);
+                if (n_ret == SOCKET_ERROR && ERROR_IO_PENDING != WSAGetLastError()) {
                     DBG_ERROR("Thread(%lu) WSASend failed\n", GetCurrentThreadId(), WSAGetLastError());
-                    closeClient(perSocketContext, false);
-                    deleteIOContext(perIOContext);
+                    close_client(per_socket_context, false);
+                    delete_io_context(per_io_context);
                 } else {
-                    DBG_DEBUG("Thread(&lu) WSASend partially completed (%d bytes), WSASend posted\n", GetCurrentThreadId(), IOSize);
+                    DBG_DEBUG("Thread(&lu) WSASend partially completed (%d bytes), WSASend posted\n", GetCurrentThreadId(), io_size);
                 }
             } else {
                 // Previous write operation completed
-                DBG_DEBUG("Thread(%lu) send completed\n", GetCurrentThreadId(), IOSize);
-                deleteIOContext(perIOContext);
+                DBG_DEBUG("Thread(%lu) send completed\n", GetCurrentThreadId(), io_size);
+                delete_io_context(per_io_context);
             }
             break;
         default: break;
@@ -238,63 +238,63 @@ DWORD WINAPI workerThread(LPVOID arg)
     return 0;
 }
 
-PerSocketContext *updateCompletionPort(SOCKET socket, IO_Operation clientIO, bool addToList)
+PerSocketContext *update_completion_port(SOCKET socket, IO_Operation client_io, bool add_to_list)
 {
     DBG_FUNC();
-    PerSocketContext *perSocketContext = NULL;
+    PerSocketContext *per_socket_context = NULL;
 
-    perSocketContext = allocateSocketContext(socket, clientIO);
-    if (perSocketContext == NULL) {
+    per_socket_context = allocate_socket_context(socket, client_io);
+    if (per_socket_context == NULL) {
         return NULL;
     }
 
-    g_IOCP = CreateIoCompletionPort((HANDLE)socket, g_IOCP, (DWORD_PTR)perSocketContext, 0);
-    if (g_IOCP == INVALID_HANDLE_VALUE) {
+    g_iocp = CreateIoCompletionPort((HANDLE)socket, g_iocp, (DWORD_PTR)per_socket_context, 0);
+    if (g_iocp == INVALID_HANDLE_VALUE) {
         DBG_FATAL("CreateIoCompletionPort() failed to create completion port: %d", GetLastError());
-        if (perSocketContext->pIOContext != NULL) {
-            free(perSocketContext->pIOContext);
+        if (per_socket_context->io_context != NULL) {
+            free(per_socket_context->io_context);
         }
-        free(perSocketContext);
+        free(per_socket_context);
         return NULL;
     }
 
-    if (addToList)
-        addToSocketContextList(perSocketContext);
+    if (add_to_list)
+        add_to_socket_context_list(per_socket_context);
 
-    DBG_INFO("updateCompletionPort: socket(%d) added to IOCP\n", perSocketContext->Socket);
+    DBG_INFO("update_completion_port: socket(%d) added to IOCP\n", per_socket_context->socket);
 
-    return perSocketContext;
+    return per_socket_context;
 }
 
-PerSocketContext *allocateSocketContext(SOCKET socket, IO_Operation clientIO)
+PerSocketContext *allocate_socket_context(SOCKET socket, IO_Operation client_io)
 {
     DBG_FUNC();
-    PerSocketContext *perSocketContext = NULL;
+    PerSocketContext *per_socket_context = NULL;
 
-    EnterCriticalSection(&g_criticalSection);
-    perSocketContext = malloc(sizeof(*perSocketContext));
-    if (perSocketContext != NULL) {
-        perSocketContext->pIOContext = malloc(sizeof(*perSocketContext->pIOContext));
-        if (perSocketContext->pIOContext != NULL) {
-            perSocketContext->Socket = socket;
-            perSocketContext->pCtxtBack = NULL;
-            perSocketContext->pCtxtForward = NULL;
-            perSocketContext->nickname = NULL;
+    EnterCriticalSection(&g_critical_section);
+    per_socket_context = malloc(sizeof(*per_socket_context));
+    if (per_socket_context != NULL) {
+        per_socket_context->io_context = malloc(sizeof(*per_socket_context->io_context));
+        if (per_socket_context->io_context != NULL) {
+            per_socket_context->socket = socket;
+            per_socket_context->ctxt_back = NULL;
+            per_socket_context->ctxt_forward = NULL;
+            per_socket_context->nickname = NULL;
 
-            perSocketContext->pIOContext->overlapped.Internal = 0;
-            perSocketContext->pIOContext->overlapped.InternalHigh = 0;
-            perSocketContext->pIOContext->overlapped.Offset = 0;
-            perSocketContext->pIOContext->overlapped.OffsetHigh = 0;
-            perSocketContext->pIOContext->overlapped.hEvent = NULL;
-            perSocketContext->pIOContext->IOOperation = clientIO;
-            perSocketContext->pIOContext->IOContextForward = NULL;
-            perSocketContext->pIOContext->totalBytes = 0;
-            perSocketContext->pIOContext->sentBytes  = 0;
-            perSocketContext->pIOContext->tlPacket = NULL;
-            perSocketContext->pIOContext->wsabuf.buf  = perSocketContext->pIOContext->buffer;
-            perSocketContext->pIOContext->wsabuf.len  = sizeof(perSocketContext->pIOContext->buffer);
+            per_socket_context->io_context->overlapped.Internal = 0;
+            per_socket_context->io_context->overlapped.InternalHigh = 0;
+            per_socket_context->io_context->overlapped.Offset = 0;
+            per_socket_context->io_context->overlapped.OffsetHigh = 0;
+            per_socket_context->io_context->overlapped.hEvent = NULL;
+            per_socket_context->io_context->io_operation = client_io;
+            per_socket_context->io_context->io_context_forward = NULL;
+            per_socket_context->io_context->total_bytes = 0;
+            per_socket_context->io_context->sent_bytes  = 0;
+            per_socket_context->io_context->tl_packet = NULL;
+            per_socket_context->io_context->wsabuf.buf  = per_socket_context->io_context->buffer;
+            per_socket_context->io_context->wsabuf.len  = sizeof(per_socket_context->io_context->buffer);
 
-            ZeroMemory(perSocketContext->pIOContext->wsabuf.buf, perSocketContext->pIOContext->wsabuf.len);
+            ZeroMemory(per_socket_context->io_context->wsabuf.buf, per_socket_context->io_context->wsabuf.len);
         } else {
             DBG_FATAL("malloc PerIOContext failed");
         }
@@ -302,131 +302,131 @@ PerSocketContext *allocateSocketContext(SOCKET socket, IO_Operation clientIO)
         DBG_FATAL("malloc PerSocketContext failed");
     }
 
-    InitializeCriticalSection(&perSocketContext->IOCriticalSection);
+    InitializeCriticalSection(&per_socket_context->io_critical_section);
 
-    LeaveCriticalSection(&g_criticalSection);
+    LeaveCriticalSection(&g_critical_section);
 
-    return perSocketContext;
+    return per_socket_context;
 }
 
-void closeClient(PerSocketContext *perSocketContext, bool graceful)
+void close_client(PerSocketContext *per_socket_context, bool graceful)
 {
     DBG_FUNC();
-    EnterCriticalSection(&g_criticalSection);
+    EnterCriticalSection(&g_critical_section);
 
-    if (perSocketContext != NULL) {
-        DBG_DEBUG("closeClient: socket(%d) connection closing (graceful=%s)\n",
-            perSocketContext->Socket, graceful ? "true" : "false");
+    if (per_socket_context != NULL) {
+        DBG_DEBUG("close_client: socket(%d) connection closing (graceful=%s)\n",
+            per_socket_context->socket, graceful ? "true" : "false");
         if (!graceful) {
             // force subsequent closesocket to be abortative
             LINGER linger;
             linger.l_onoff = 1;
             linger.l_linger = 0;
-            setsockopt(perSocketContext->Socket, SOL_SOCKET, SO_LINGER, (char*)&linger, sizeof(linger));
+            setsockopt(per_socket_context->socket, SOL_SOCKET, SO_LINGER, (char*)&linger, sizeof(linger));
         }
-        closesocket(perSocketContext->Socket);
-        perSocketContext->Socket = INVALID_SOCKET;
-        if (perSocketContext->nickname)
-            free(perSocketContext->nickname);
-        deleteFromSocketContextList(perSocketContext);
-        perSocketContext = NULL;
+        closesocket(per_socket_context->socket);
+        per_socket_context->socket = INVALID_SOCKET;
+        if (per_socket_context->nickname)
+            free(per_socket_context->nickname);
+        delete_from_socket_context_list(per_socket_context);
+        per_socket_context = NULL;
     } else {
-        DBG_DEBUG("perSocketContext is NULL\n");
+        DBG_DEBUG("per_socket_context is NULL\n");
     }
 
-    LeaveCriticalSection(&g_criticalSection);
+    LeaveCriticalSection(&g_critical_section);
 }
 
-void addToSocketContextList(PerSocketContext *perSocketContext)
+void add_to_socket_context_list(PerSocketContext *per_socket_context)
 {
     PerSocketContext *temp = NULL;
 
-    EnterCriticalSection(&g_criticalSection);
+    EnterCriticalSection(&g_critical_section);
 
     if (g_clients == NULL) {
         // Add first node to the list
-        perSocketContext->pCtxtBack = NULL;
-        perSocketContext->pCtxtForward = NULL;
-        g_clients = perSocketContext;
+        per_socket_context->ctxt_back = NULL;
+        per_socket_context->ctxt_forward = NULL;
+        g_clients = per_socket_context;
     } else {
         // Add node to head of list
         temp = g_clients;
 
-        g_clients = perSocketContext;
-        perSocketContext->pCtxtBack = temp;
-        perSocketContext->pCtxtForward = NULL;
+        g_clients = per_socket_context;
+        per_socket_context->ctxt_back = temp;
+        per_socket_context->ctxt_forward = NULL;
 
-        temp->pCtxtForward = perSocketContext;
+        temp->ctxt_forward = per_socket_context;
     }
 
-    LeaveCriticalSection(&g_criticalSection);
+    LeaveCriticalSection(&g_critical_section);
 }
 
-void deleteFromSocketContextList(PerSocketContext *perSocketContext)
+void delete_from_socket_context_list(PerSocketContext *per_socket_context)
 {
     PerSocketContext    *back;
     PerSocketContext    *forward;
-    PerIOContext        *nextIO = NULL;
-    PerIOContext        *tempIO = NULL;
+    PerIOContext        *next_io = NULL;
+    PerIOContext        *temp_io = NULL;
 
-    EnterCriticalSection(&g_criticalSection);
+    EnterCriticalSection(&g_critical_section);
 
-    if (perSocketContext != NULL) {
-        back = perSocketContext->pCtxtBack;
-        forward = perSocketContext->pCtxtForward;
+    if (per_socket_context != NULL) {
+        back = per_socket_context->ctxt_back;
+        forward = per_socket_context->ctxt_forward;
 
         if ((back == NULL) && (forward == NULL)) {
             // This is the only node in the list
             g_clients = NULL;
         } else if ((back == NULL) && (forward != NULL)) {
             // Start node
-            forward->pCtxtBack = NULL;
+            forward->ctxt_back = NULL;
             g_clients = forward;
         } else if ((back != NULL) && (forward == NULL)) {
             // End node
-            back->pCtxtForward = NULL;
+            back->ctxt_forward = NULL;
         } else if (back && forward) {
-            back->pCtxtForward = forward;
-            forward->pCtxtBack = back;
+            back->ctxt_forward = forward;
+            forward->ctxt_back = back;
         }
 
         // Free all IO context structs per socket
-        tempIO = perSocketContext->pIOContext;
+        temp_io = per_socket_context->io_context;
         do {
-            nextIO = tempIO->IOContextForward;
-            if (tempIO) {
+            next_io = temp_io->io_context_forward;
+            if (temp_io) {
                 // Overlapped structure is safe to delete only when
                 // posted IO has completed. This only need to be tested only
                 // in the shutdown process.
-                if (g_shutDown)
-                    while (!HasOverlappedIoCompleted((LPOVERLAPPED)&tempIO)) Sleep(0);
-                free(tempIO);
-                tempIO = NULL;
+                if (g_shut_down)
+                    while (!HasOverlappedIoCompleted((LPOVERLAPPED)&temp_io)) Sleep(0);
+                free(temp_io);
+                temp_io = NULL;
             }
-            tempIO = nextIO;
-        } while (nextIO != NULL);
-        free(perSocketContext);
-        perSocketContext = NULL;
+            temp_io = next_io;
+        } while (next_io != NULL);
+        free(per_socket_context);
+        per_socket_context = NULL;
     } else {
-        DBG_WARNING("perSocketContext is NULL\n");
+        DBG_WARNING("per_socket_context is NULL\n");
     }
 
-    LeaveCriticalSection(&g_criticalSection);
+    LeaveCriticalSection(&g_critical_section);
 }
 
-void deleteIOContext(PerIOContext *perIOContext)
+void delete_io_context(PerIOContext *per_io_context)
 {
-    if (perIOContext->tlPacket)
-        deleteTLPacket(perIOContext->tlPacket);
-    if (g_shutDown)
-        while (!HasOverlappedIoCompleted((LPOVERLAPPED)&perIOContext)) Sleep(0);
-    free(perIOContext);
+    if (per_io_context->tl_packet)
+        delete_tl_packet(per_io_context->tl_packet);
+    if (g_shut_down)
+        while (!HasOverlappedIoCompleted((LPOVERLAPPED)&per_io_context)) Sleep(0);
+    free(per_io_context);
 }
 
-PerIOContext *allocateIOContext()
+PerIOContext *allocate_io_context()
 {
-    PerIOContext *perIOContext = NULL;
-    perIOContext = malloc(sizeof(*perIOContext));
-    ZeroMemory(perIOContext, sizeof(*perIOContext));
-    return perIOContext;
+    PerIOContext *per_io_context = NULL;
+    per_io_context = malloc(sizeof(*per_io_context));
+    ZeroMemory(per_io_context, sizeof(*per_io_context));
+    return per_io_context;
 }
