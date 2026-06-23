@@ -14,6 +14,7 @@
 #include "consoleInput.h"
 #include "consoleOutput.h"
 #include "contactsManager.h"
+#include "packet.h"
 
 #include <process.h>
 #include <processthreadsapi.h>
@@ -35,9 +36,8 @@ bool logIn(const SOCKET socket)
     DBG_FUNC();
     char    nickname[NICKNAME_LEN+1];
     bool    result = false;
-    Packet  out, in;
 
-    PendingRequest *request;
+    Request *request;
 
     printRequest("Enter nickname or q to quit:");
     readInBuffer(nickname, NICKNAME_LEN);
@@ -47,33 +47,50 @@ bool logIn(const SOCKET socket)
 
     request = createRequest();
     if (request == NULL) {
-        DBG_FATAL("Failed to create request\n");
+        DBG_FATAL("Failed to create request");
         return false;
     }
 
-    out = createPacket(TYPE_REQUEST, COMMAND_LOGIN, 0, request->id);
-    addPacketString(&out, nickname);
-    sendPacket(socket, out, &socketServerMutex);
+    PacketLogin *packetLogin = NULL;
+    createLoginPacket(&packetLogin);
+
+    loginSetNickname(packetLogin, nickname);
+    associateRequest(packetLogin->tlPacket, request);
+    tlPackLogin(packetLogin);
+    int totalSent = 0;
+    while (totalSent < packetLogin->tlPacket->size) {
+        int sent = send(socket, packetLogin->tlPacket->data + totalSent, packetLogin->tlPacket->size - totalSent, 0);
+        if (sent <= 0) {
+            DBG_FATAL("Failed to send login packet");
+            exit(1);
+        }
+        totalSent += sent;
+    }
+    // sendPacket(socket, out, &socketServerMutex);
 
     WaitForSingleObject(request->event, INFINITE);
     WaitForSingleObject(request->mutex, INFINITE);
+    TLPacket *tlRespond = request->packet;
 
-    in = packetFromBytes(request->data);
+    PacketParseStatus parseStatus;
+    PacketServerRespond *serverRespond = NULL;
+    if ((parseStatus = tlUnpackServerRespond(tlRespond, &serverRespond)) != PKT_PARSE_OK) {
+        DBG_ERROR("Failed to parse packet %s", getParseStatusString(parseStatus));
+        // TODO handle error
+        exit(1);
+    }
 
-    switch (in.status) {
-    case STATUS_OK:
+    switch (serverRespond->status) {
+    case SERV_RESPOND_OK:
         result = true;
         break;
     default:
-        printStatusErrorMessage(in.status);
+        DBG_ERROR("Server respond not ok");
+        // printStatusErrorMessage(in.status);
     }
 
-    if (in.data != NULL)
-        deletePacket(in);
-    if (out.data != NULL)
-        deletePacket(out);
-    deleteRequest(&request);
-    clearRequest();
+    deletePacketServerRespond(serverRespond);
+    deleteTLPacket(tlRespond);
     return result;
 }
 
@@ -86,7 +103,7 @@ void showPrivateChats(void)
 
     while (true) {
         if (contact == NULL) {
-            printNotification(formatDefault, "No contacts found\n");
+            printNotification(formatDefault, "No contacts found");
             return;
         }
 
@@ -119,7 +136,7 @@ void showPrivateChats(void)
         selected = atoi(input);
 
         if (selected > appData.contactCount || selected < 0) {
-            printNotification(formatDefault, "No such option\n");
+            printNotification(formatDefault, "No such option");
             continue;
         }
 
@@ -208,50 +225,50 @@ void sendMessage(SOCKET serverSocket, const Contact *contact, const char *messag
 
 void createChat(SOCKET socket)
 {
-    DBG_FUNC();
-    PendingRequest  *request;
-    char            nickname[NICKNAME_LEN+1];
-    Packet          in, out;
-
-    printRequest("Enter nickname or q to quit: ");
-    readInBuffer(nickname, NICKNAME_LEN);
-    clearRequest();
-
-    if (strcmp(nickname, "q") == 0)
-        return;
-
-    if (findContact(nickname) != NULL) {
-        DBG_INFO("Chat already created\n");
-        printNotification(formatDefault, "Chat already created");
-        return;
-    }
-
-    request = createRequest();
-    if (request == NULL) {
-        DBG_FATAL("Failed to create request\n");
-        printError("Can't create chat");
-        return;
-    }
-    out = createPacket(TYPE_REQUEST, COMMAND_CREATE_CHAT, 0, request->id);
-    addPacketString(&out, nickname);
-    sendPacket(socket, out, &socketServerMutex);
-
-    WaitForSingleObject(request->event, INFINITE);
-    WaitForSingleObject(request->mutex, INFINITE);
-
-    in = packetFromBytes(request->data);
-
-    switch (in.status) {
-    case STATUS_OK:
-        DBG_INFO("Chat created\n");
-        printSuccess("Chat created");
-        createContact(nickname);
-        break;
-    default:
-        printStatusErrorMessage(in.status);
-    }
-
-    deleteRequest(&request);
+    // DBG_FUNC();
+    // Request  *request;
+    // char            nickname[NICKNAME_LEN+1];
+    // TLPacket          in, out;
+    //
+    // printRequest("Enter nickname or q to quit: ");
+    // readInBuffer(nickname, NICKNAME_LEN);
+    // clearRequest();
+    //
+    // if (strcmp(nickname, "q") == 0)
+    //     return;
+    //
+    // if (findContact(nickname) != NULL) {
+    //     DBG_INFO("Chat already created");
+    //     printNotification(formatDefault, "Chat already created");
+    //     return;
+    // }
+    //
+    // request = createRequest();
+    // if (request == NULL) {
+    //     DBG_FATAL("Failed to create request");
+    //     printError("Can't create chat");
+    //     return;
+    // }
+    // out = createPacket(TYPE_REQUEST, CMD_CREATE_CHAT, 0, request->id);
+    // addPacketString(&out, nickname);
+    // sendPacket(socket, out, &socketServerMutex);
+    //
+    // WaitForSingleObject(request->event, INFINITE);
+    // WaitForSingleObject(request->mutex, INFINITE);
+    //
+    // in = packetFromBytes(request->data);
+    //
+    // switch (in.status) {
+    // case SERV_RESPOND_OK:
+    //     DBG_INFO("Chat created");
+    //     printSuccess("Chat created");
+    //     createContact(nickname);
+    //     break;
+    // default:
+    //     printStatusErrorMessage(in.status);
+    // }
+    //
+    // deleteRequest(&request);
 }
 
 void deleteChat(const Contact *contact)

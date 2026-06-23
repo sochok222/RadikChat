@@ -68,7 +68,7 @@ void deleteClient(ClientInfo *client)
         }
         p = &(*p)->next;
     }
-    DBG_ERROR("client not found\n");
+    DBG_ERROR("client not found");
 }
 
 char *getClientAddress(ClientInfo *client)
@@ -91,7 +91,7 @@ fd_set waitForConnections(SOCKET server)
     FD_SET(server, &fdReads);
 
     if (select(0, &fdReads, 0, 0, NULL) < 0) {
-        DBG_FATAL("waitForClients select() failed.\n");
+        DBG_FATAL("waitForClients select() failed.");
         logWsaError(WSAGetLastError());
         exit(1);
     }
@@ -110,7 +110,7 @@ fd_set waitForPackets(void)
     ReleaseMutex(fdClientsMutex);
 
     if (select(0, &fdResult, 0, 0, 0) < 0) {
-        DBG_FATAL("waitForPackets select() failed.\n");
+        DBG_FATAL("waitForPackets select() failed.");
         logWsaError(WSAGetLastError());
         exit(1);
     }

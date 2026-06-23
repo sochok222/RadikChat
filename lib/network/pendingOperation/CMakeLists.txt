@@ -18,3 +18,8 @@ target_link_libraries(${PROJECT_NAME}
         NetworkPacket
         ConsoleOut
 )
+
+target_link_libraries(${PROJECT_NAME}
+        PRIVATE
+        Queue
+)

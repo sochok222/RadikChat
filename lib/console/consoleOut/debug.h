@@ -16,10 +16,10 @@
 
 #if DEBUG_LEVEL >= 5
 #define DBG_DEBUG(fmt, ...)\
-    log_message(DBG_MODE_DEBUG, "[TRACE]: %s(), line %d: " fmt, __FUNCTION__, __LINE__, ##__VA_ARGS__)
+    log_message(DBG_MODE_DEBUG, "[TRACE]: %s(), line %d: " fmt "\n", __FUNCTION__, __LINE__, ##__VA_ARGS__)
 #elif DEBUG_LEVEL >= 4
 #define DBG_DEBUG(fmt, ...)\
-    logMessage(DBG_MODE_DEBUG, "[DEBUG]: " fmt, ##__VA_ARGS__)
+    logMessage(DBG_MODE_DEBUG, "[DEBUG]: " fmt "\n", ##__VA_ARGS__)
 #define DBG_FUNC() \
     logMessage(DBG_MODE_DEBUG, "[FUNC]: %s()\n", __FUNCTION__)
 #else
@@ -29,28 +29,28 @@
 
 #if DEBUG_LEVEL >= 3
 #define DBG_INFO(fmt, ...)\
-    logMessage(DBG_MODE_INFO, "[INFO]: " fmt, ##__VA_ARGS__)
+    logMessage(DBG_MODE_INFO, "[INFO]: " fmt "\n", ##__VA_ARGS__)
 #else
 #define DBG_INFO(...)
 #endif
 
 #if DEBUG_LEVEL >= 2
 #define DBG_WARNING(fmt, ...) \
-    logMessage(DBG_MODE_WARNING, "[WARNING]: %s(), line %d: " fmt, __FUNCTION__, __LINE__, ##__VA_ARGS__)
+    logMessage(DBG_MODE_WARNING, "[WARNING]: %s(), line %d: " fmt "\n", __FUNCTION__, __LINE__, ##__VA_ARGS__)
 #else
 #define DBG_WARNING(...)
 #endif
 
 #if DEBUG_LEVEL >= 1
 #define DBG_ERROR(fmt, ...) \
-    logMessage(DBG_MODE_ERROR, "[ERROR] %s(), line %d: " fmt , __FUNCTION__, __LINE__, ##__VA_ARGS__)
+    logMessage(DBG_MODE_ERROR, "[ERROR] %s(), line %d: " fmt "\n", __FUNCTION__, __LINE__, ##__VA_ARGS__)
 #else
 #define DBG_ERROR(...)
 #endif
 
 #if DEBUG_LEVEL >= 1
 #define DBG_FATAL(fmt, ...)\
-    logMessage(DBG_MODE_FATAL, "[FATAL]: %s(), line %d: " fmt, __FUNCTION__, __LINE__, ##__VA_ARGS__)
+    logMessage(DBG_MODE_FATAL, "[FATAL]: %s(), line %d: " fmt "\n", __FUNCTION__, __LINE__, ##__VA_ARGS__)
 #else
 #define DBG_FATAL(...)
 #endif

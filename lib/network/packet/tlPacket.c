@@ -21,7 +21,7 @@ TLPacket *allocTLPacket()
 {
     TLPacket *packet = malloc(sizeof(*packet));
     if (packet == nullptr) {
-        DBG_FATAL("Out of memory\n");
+        DBG_FATAL("Out of memory");
         exit(1);
     }
 
@@ -36,7 +36,7 @@ PacketParseStatus packetFromBytes(uint8_t *data, TLPacket **packet)
 {
     TLPacket *result;
     if ((result = malloc(sizeof(*result))) == nullptr) {
-        DBG_FATAL("Out of memory\n");
+        DBG_FATAL("Out of memory");
         exit(1);
     }
 
@@ -55,10 +55,10 @@ PacketParseStatus packetFromBytes(uint8_t *data, TLPacket **packet)
 
     result->data = malloc(result->size);
     if (result->data == NULL) {
-        DBG_FATAL("Out of memory\n");
+        DBG_FATAL("Out of memory");
         exit(1);
     }
-    memcpy(result->data + PKT_HEADER_SIZE, data + PKT_HEADER_SIZE, result->size - PKT_HEADER_SIZE);
+    memcpy(result->data, data, result->size);
 
     *packet = result;
     return PKT_PARSE_OK;
@@ -88,7 +88,7 @@ void sendPacket(SOCKET socket, TLPacket packet, HANDLE *socketMutex)
     while (totalSend < PKT_HEADER_SIZE) {
         int sent = send(socket, header + totalSend, PKT_HEADER_SIZE - totalSend, 0);
         if (sent <= 0) {
-            DBG_FATAL("Can`t send packet to the server\n");
+            DBG_FATAL("Can`t send packet to the server");
             printNotification(formatError, "can`t send packet to the server");
             exit(1);
         }
@@ -132,10 +132,17 @@ void tlPackData(int fieldType, TLPacket *packet, const void *data)
         fieldSize = getSizeOfType(fieldType);
 
     if (packet->size + fieldSize > packet->capacity) {
-        packet->data = realloc(packet->data, packet->size + fieldSize);
+        packet->data = realloc(packet->data, packet->size + fieldSize + 10); // NOTE + 10 is temporary solution
         packet->capacity = packet->size + fieldSize;
     }
-    memcpy(packet->data + packet->size, data, fieldSize);
+    if (fieldType == PKT_F_STRING) {
+        fieldSize++; // Need to send null symbol
+        memcpy(packet->data + packet->size, &fieldSize, sizeof(fieldSize));
+        packet->size += sizeof(fieldSize);
+        memcpy(packet->data + packet->size, data, fieldSize + 1);
+    } else {
+        memcpy(packet->data + packet->size, data, fieldSize);
+    }
     packet->size += fieldSize;
 }
 
@@ -156,22 +163,23 @@ PacketParseStatus readPacketField(int fieldType, TLPacket *packet, uint32_t *rea
         *((char**)out) = (char*)(packet->data + *readPos + PKT_F_STRING_OFFSET);
         break;
     case PKT_F_UINT8:
-        *((uint8_t*)out) = *(uint8_t*)(packet->data);
+        *((uint8_t*)out) = *(uint8_t*)(packet->data + *readPos);
         break;
     case PKT_F_UINT16:
-        *((uint16_t*)out) = *(uint16_t*)(packet->data);
+        *((uint16_t*)out) = *(uint16_t*)(packet->data + *readPos);
         break;
     case PKT_F_UINT32:
-        *((uint32_t*)out) = *(uint32_t*)(packet->data);
+        *((uint32_t*)out) = *(uint32_t*)(packet->data + *readPos);
         break;
     case PKT_F_UINT64:
-        *((uint64_t*)out) = *(uint64_t*)(packet->data);
+        *((uint64_t*)out) = *(uint64_t*)(packet->data + *readPos);
         break;
     default:
         return PKT_PARSE_UNKNOWN_FIELD_TYPE;
     }
 
     *readPos += fieldSize;
+    return PKT_PARSE_OK;
 }
 
 static size_t getSizeOfType(int fieldType)
@@ -201,4 +209,26 @@ const char *getParseStatusString(PacketParseStatus parseStatus)
     default:
         return "unknown parse status";
     }
+}
+
+uint16_t tlPacketGetID(TLPacket *packet)
+{
+    return packet->id & 0xFFFF;
+}
+
+uint16_t tlPacketGetGen(TLPacket *packet)
+{
+    return packet->id >> 16;
+}
+
+void tlPacketSetID(TLPacket *packet, uint16_t id)
+{
+    packet->id &= ~0xFFFF;
+    packet->id |= id;
+}
+
+void tlPacketSetGen(TLPacket *packet, uint16_t gen)
+{
+    packet->id &= ~0xFFFF0000;
+    packet->id |= (gen << 16);
 }

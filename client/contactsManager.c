@@ -26,12 +26,12 @@ Contact *findContact(const char *nickname)
     Contact *p = contacts;
     while (p != NULL) {
         if (strcmp(p->nickname, nickname) == 0) {
-            DBG_DEBUG("Found contact\n");
+            DBG_DEBUG("Found contact");
             return p;
         }
         p = p->next;
     }
-    DBG_DEBUG("Contact not found\n");
+    DBG_DEBUG("Contact not found");
     return NULL;
 }
 
@@ -48,7 +48,7 @@ void deleteContact(const char *nickname)
         }
         p = &(*p)->next;
     }
-    DBG_ERROR("Contact not found\n");
+    DBG_ERROR("Contact not found");
 }
 
 static void initChatHistory(ChatHistory *chatHistory)

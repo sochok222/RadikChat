@@ -90,5 +90,9 @@ void deleteTLPacket(TLPacket *packet);
 void sendPacket(SOCKET socket, TLPacket packet, HANDLE *socketMutex);
 void tlPackHeader(TLPacket *packet);
 
+inline uint16_t tlPacketGetID(TLPacket *packet);
+inline uint16_t tlPacketGetGen(TLPacket *packet);
+inline void     tlPacketSetID(TLPacket *packet, uint16_t id);
+inline void     tlPacketSetGen(TLPacket *packet, uint16_t gen);
 
 #endif //RADIKCHAT_NETWORKTYPES_H

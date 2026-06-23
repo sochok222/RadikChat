@@ -16,10 +16,10 @@ PacketParseStatus tlUnpackLogin(TLPacket *tlPacket, PacketLogin **packetLogin)
     }
 
     if ((result = malloc(sizeof(*result))) == nullptr) {
-        DBG_FATAL("Out of memory\n");
+        DBG_FATAL("Out of memory");
         exit(1);
     }
-    result->childPacket = tlPacket;
+    result->tlPacket = tlPacket;
     result->nicknameLen = 0;
     result->nicknameCapacity = 0;
     result->nickname = NULL;
@@ -42,8 +42,8 @@ PacketParseStatus tlUnpackLogin(TLPacket *tlPacket, PacketLogin **packetLogin)
 
 void tlPackLogin(PacketLogin *packetLogin)
 {
-    tlPackHeader(packetLogin->childPacket);
-    tlPackData(PKT_F_STRING, packetLogin->childPacket, packetLogin->nickname);
+    tlPackData(PKT_F_STRING, packetLogin->tlPacket, packetLogin->nickname);
+    tlPackHeader(packetLogin->tlPacket);
 }
 
 void loginSetNickname(PacketLogin *packetLogin, char *nickname)
@@ -53,17 +53,18 @@ void loginSetNickname(PacketLogin *packetLogin, char *nickname)
     if (packetLogin->nicknameCapacity < nicknameLen + 1) {
         packetLogin->nickname = realloc(packetLogin->nickname, nicknameLen + 1);
         if (packetLogin->nickname == nullptr) {
-            DBG_FATAL("Out of memory\n");
+            DBG_FATAL("Out of memory");
             exit(1);
         }
         packetLogin->nicknameLen = nicknameLen + 1;
         packetLogin->nicknameCapacity = nicknameLen + 1;
+        memcpy(packetLogin->nickname, nickname, nicknameLen + 1);
     }
 }
 
 void deletePacketLogin(PacketLogin *packetLogin)
 {
-    deleteTLPacket(packetLogin->childPacket);
+    // deleteTLPacket(packetLogin->tlPacket);
     if (packetLogin->nicknameCapacity > 0)
         free(packetLogin->nickname);
     free(packetLogin);
@@ -80,14 +81,14 @@ PacketParseStatus tlUnpackCreateChat(TLPacket *tlPacket, PacketCreateChat **pack
     if (tlPacket == nullptr) {
         newPacket = true;
         tlPacket = allocTLPacket();
-        tlPacket->command = CMD_LOGIN;
+        tlPacket->command = CMD_CREATE_CHAT;
     }
 
     if ((result = malloc(sizeof(*result))) == nullptr) {
-        DBG_FATAL("Out of memory\n");
+        DBG_FATAL("Out of memory");
         exit(1);
     }
-    result->childPacket = tlPacket;
+    result->tlPacket = tlPacket;
     result->receiverID = 0;
 
     if (newPacket) {
@@ -107,8 +108,8 @@ PacketParseStatus tlUnpackCreateChat(TLPacket *tlPacket, PacketCreateChat **pack
 
 void tlPackCreateChat(PacketCreateChat *packetCreateChat)
 {
-    tlPackHeader(packetCreateChat->childPacket);
-    tlPackData(PKT_F_UINT64, packetCreateChat->childPacket, &packetCreateChat->receiverID);
+    tlPackData(PKT_F_UINT64, packetCreateChat->tlPacket, &packetCreateChat->receiverID);
+    tlPackHeader(packetCreateChat->tlPacket);
 }
 
 void createChatSetReceiverID(PacketCreateChat *packetCreateChat, ReceiverID receiverID)
@@ -118,7 +119,7 @@ void createChatSetReceiverID(PacketCreateChat *packetCreateChat, ReceiverID rece
 
 void deletePacketCreateChat(PacketCreateChat *packetCreateChat)
 {
-    deleteTLPacket(packetCreateChat->childPacket);
+    // deleteTLPacket(packetCreateChat->tlPacket);
     free(packetCreateChat);
 }
 
@@ -133,14 +134,14 @@ PacketParseStatus tlUnpackServerRespond(TLPacket *tlPacket, PacketServerRespond 
     if (tlPacket == nullptr) {
         newPacket = true;
         tlPacket = allocTLPacket();
-        tlPacket->command = CMD_LOGIN;
+        tlPacket->command = CMD_SERVER_RESPOND;
     }
 
     if ((result = malloc(sizeof(*result))) == nullptr) {
-        DBG_FATAL("Out of memory\n");
+        DBG_FATAL("Out of memory");
         exit(1);
     }
-    result->childPacket = tlPacket;
+    result->tlPacket = tlPacket;
     result->status = 0;
 
     if (newPacket) {
@@ -160,8 +161,8 @@ PacketParseStatus tlUnpackServerRespond(TLPacket *tlPacket, PacketServerRespond 
 
 void tlPackServerRespond(PacketServerRespond *packetServerRespond)
 {
-    tlPackHeader(packetServerRespond->childPacket);
-    tlPackData(PKT_F_UINT16, packetServerRespond->childPacket, &packetServerRespond->status);
+    tlPackData(PKT_F_UINT16, packetServerRespond->tlPacket, &packetServerRespond->status);
+    tlPackHeader(packetServerRespond->tlPacket);
 }
 
 void serverRespondSetRespond(PacketServerRespond *packetServerRespond, ServerRespond status)
@@ -171,6 +172,6 @@ void serverRespondSetRespond(PacketServerRespond *packetServerRespond, ServerRes
 
 void deletePacketServerRespond(PacketServerRespond *packetServerRespond)
 {
-    deleteTLPacket(packetServerRespond->childPacket);
+    // deleteTLPacket(packetServerRespond->tlPacket);
     free(packetServerRespond);
 }

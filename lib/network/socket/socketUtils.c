@@ -13,27 +13,27 @@ PUBLIC SOCKET createPassiveSocket(const TCHAR *port, const int socktype, const i
 	SOCKET socketListen = INVALID_SOCKET;
 	int error_code; // For storing error code from WSAGetLastError()
 	
-    DBG_INFO("Configuring server address...\n");
+    DBG_INFO("Configuring server address...");
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_socktype = socktype;
 	hints.ai_family = family;
 	hints.ai_flags = AI_PASSIVE; // Socket will be used in bind()
 	if (getaddrinfo(NULL, port, &hints, &bindAddress) != 0) {
-                DBG_ERROR("getaddrinfo() failed. Error code (%d)\n", WSAGetLastError());
+                DBG_ERROR("getaddrinfo() failed. Error code (%d)", WSAGetLastError());
 		error_code = WSAGetLastError();
 		goto failure;
 	}
 
-    DBG_DEBUG("Creating socket...\n");
+    DBG_DEBUG("Creating socket...");
 	if ((socketListen = socket(bindAddress->ai_family, bindAddress->ai_socktype, bindAddress->ai_protocol)) == INVALID_SOCKET) {
-                DBG_ERROR("socket() failed. Error code (%d)\n", WSAGetLastError());
+                DBG_ERROR("socket() failed. Error code (%d)", WSAGetLastError());
 		error_code = WSAGetLastError();
 		goto failure;
 	}
 
-    DBG_DEBUG("Binding socket...\n");
+    DBG_DEBUG("Binding socket...");
 	if (bind(socketListen, bindAddress->ai_addr, bindAddress->ai_addrlen) != 0) {
-                DBG_ERROR("bind() failed. Error code (%d)\n", WSAGetLastError());
+                DBG_ERROR("bind() failed. Error code (%d)", WSAGetLastError());
 		error_code = WSAGetLastError();
 		goto failure;
 	}
@@ -41,20 +41,20 @@ PUBLIC SOCKET createPassiveSocket(const TCHAR *port, const int socktype, const i
 	freeaddrinfo(bindAddress);
 	bindAddress = NULL;
 
-    DBG_DEBUG("Placing socket in listen state...\n");
+    DBG_DEBUG("Placing socket in listen state...");
 	if (listen(socketListen, backlog) != 0) {
-                DBG_ERROR("listen() failed. Error code (%d)\n", WSAGetLastError());
+                DBG_ERROR("listen() failed. Error code (%d)", WSAGetLastError());
 		error_code = WSAGetLastError();
 		goto failure;
 	}
 
 	if (socketListen == INVALID_SOCKET) {
-                DBG_ERROR("socket is INVALID_SOCKET. Error code (%d)\n", WSAGetLastError());
+                DBG_ERROR("socket is INVALID_SOCKET. Error code (%d)", WSAGetLastError());
 		error_code = WSAGetLastError();
 		goto failure;
 	}
 
-        DBG_INFO("Successfully created and binded socket\n");
+        DBG_INFO("Successfully created and binded socket");
 	return socketListen;
 
 failure:
@@ -74,19 +74,19 @@ PUBLIC SOCKET createActiveSocket(const TCHAR *host, const TCHAR *port, const int
 	SOCKET socketPeer = INVALID_SOCKET;
 	int errorCode; // For storing error code from WSAGetLastError()
 
-    DBG_DEBUG("Configuring remote address...\n");
+    DBG_DEBUG("Configuring remote address...");
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_socktype = socktype;
 	if ((errorCode = getaddrinfo(host, port, &hints, &peerAddress)) != 0) {
-        DBG_ERROR("getaddrinfo() failed. Error code (%d)\n", errorCode);
+        DBG_ERROR("getaddrinfo() failed. Error code (%d)", errorCode);
 	    logWsaError(errorCode);
 		goto failure;
 	}
 
-    DBG_DEBUG("Creating socket...\n");
+    DBG_DEBUG("Creating socket...");
 	if ((socketPeer = socket(peerAddress->ai_family, peerAddress->ai_socktype,
 				    peerAddress->ai_protocol)) == INVALID_SOCKET) {
-        DBG_ERROR("socket() failed. Error code (%d)\n", WSAGetLastError());
+        DBG_ERROR("socket() failed. Error code (%d)", WSAGetLastError());
 		errorCode = WSAGetLastError();
 		goto failure;
 	}

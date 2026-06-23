@@ -26,7 +26,7 @@ bool initDebug(const char *logFile)
 
     if (logFile != NULL) {
         if ((fOut = fopen(logFile, "a")) == NULL) {
-            printf("Can't open log file\n");
+            printf("Can't open log file");
             return false;
         }
         mStdout = fOut;
@@ -46,15 +46,15 @@ void logWsaError(unsigned long error_code)
 
 	/* Get error text description from error code */
 	FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-		NULL, 
-		error_code, 
-		MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), 
-		(LPWSTR)&s, 
-		0, 
+		NULL,
+		error_code,
+		MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+		(LPWSTR)&s,
+		0,
 		NULL
-		); 
+		);
 
-	if (s != NULL) { 
+	if (s != NULL) {
 		fprintf(mStderr, "Error message: ");
 
 	    // Red text, default bg
@@ -64,9 +64,9 @@ void logWsaError(unsigned long error_code)
 
 		LocalFree(s);
 	}
-	else { 
-        DBG_ERROR("Can't find error message for error code (%d)\n", error_code);
-	} 
+	else {
+        DBG_ERROR("Can't find error message for error code (%d)", error_code);
+	}
 }
 
 void logWinError(unsigned long error_code)
@@ -162,5 +162,5 @@ void setTextColor(TextFormat color)
 void printTimeElapsed(const char *m, time_t start, time_t stop)
 {
     double elapsed = ((double)stop - start) / CLOCKS_PER_SEC;
-    DBG_INFO("%s %lf\n", m, elapsed);
+    DBG_INFO("%s %lf", m, elapsed);
 }

@@ -1,6 +1,8 @@
 #ifndef RADIKCHAT_SERVER_H
 #define RADIKCHAT_SERVER_H
 
+#include "tlPacket.h"
+
 #include <mswsock.h>
 #define MAX_BUFFER_SIZE 4096
 
@@ -20,6 +22,7 @@ typedef struct sPerIOContext
     DWORD           sentBytes;
     IO_Operation    IOOperation;
     SOCKET          socketAccept;
+    TLPacket        *tlPacket;
 
     struct sPerIOContext *IOContextForward;
 } PerIOContext;

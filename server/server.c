@@ -5,11 +5,12 @@
 #include "packet.h"
 #include "serverUtils.h"
 
+#include "queue.h"
 #include <debug.h>
-#include <tlPacket.h>
 #include <process.h>
 #include <socketUtils.h>
 #include <stdio.h>
+#include <tlPacket.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
 
@@ -30,7 +31,7 @@ int _cdecl main(int argc, char **argv)
     initDebug(NULL);
     setAlternateConsoleBuffer(true);
     enableVirtualProcessing(true);
-    DBG_INFO("Starting server...\n");
+    DBG_INFO("Starting server...");
     WSADATA wsadata;
     SYSTEM_INFO systemInfo;
     SOCKET acceptSocket;
@@ -39,7 +40,7 @@ int _cdecl main(int argc, char **argv)
     DWORD flags = 0;
     int nRet = 0;
 
-    DBG_DEBUG("Initializing winsock...\n");
+    DBG_DEBUG("Initializing winsock...");
     if (WSAStartup(MAKEWORD(2, 2), &wsadata) != 0) {
         fprintf(stderr, "Error: Failed to initialize winsock\n");
         return 1;
@@ -61,7 +62,7 @@ int _cdecl main(int argc, char **argv)
     }
 
     // Create worker threads that will service overlapped IO packets
-    DBG_DEBUG("Creating %d threads...\n", g_threadCount);
+    DBG_DEBUG("Creating %d threads...", g_threadCount);
     for (DWORD i = 0; i < g_threadCount; i++) {
         g_threadHandles[i] = CreateThread(NULL, 0, workerThread, g_IOCP, 0, NULL);
         if (g_threadHandles[i] == INVALID_HANDLE_VALUE) {
@@ -119,6 +120,8 @@ DWORD WINAPI workerThread(LPVOID arg)
     DWORD sendNumBytes = 0;
     DWORD flags = 0;
     DWORD IOSize = 0;
+    PacketParseStatus parseStatus;
+    ServerRespond respond;
 
     while (true) {
         success = GetQueuedCompletionStatus(IOCP, &IOSize,
@@ -128,7 +131,7 @@ DWORD WINAPI workerThread(LPVOID arg)
 
         if (!success) {
             // Not always mean error
-            DBG_INFO("GetQueuedCompletionStatus() failed: %d\n", GetLastError());
+            DBG_INFO("Thread (%d) GetQueuedCompletionStatus() failed: %d", GetCurrentThreadId(), GetLastError());
         }
 
         if (perSocketContext == NULL) {
@@ -138,6 +141,7 @@ DWORD WINAPI workerThread(LPVOID arg)
         }
 
         if (!success || (success && (IOSize == 0))) {
+            DBG_ERROR("Thread (%d) IOSize == 0, Error code (%d)");
             closeClient(perSocketContext, false);
             continue;
         }
@@ -145,39 +149,55 @@ DWORD WINAPI workerThread(LPVOID arg)
         // Determine what type of IO packet has completed
         perIOContext = (PerIOContext*)overlapped;
         switch (perIOContext->IOOperation) {
-        case IO_OP_READ:
+        case IO_OP_READ: // TODO handle partial read
             // A read operation has completed, process received packet and post another action on the socket
-            DBG_INFO("Thread(%lu) received %d bytes\n", GetCurrentThreadId(), IOSize);
+            DBG_INFO("Thread(%lu) received %d bytes", GetCurrentThreadId(), IOSize);
             perIOContext->wsabuf.buf += IOSize;
             perIOContext->wsabuf.len -= IOSize;
-            if (IOSize >= PACKET_HEADER_SIZE && IOSize >= *(size_t*)(perIOContext + PACKET_SIZE_OFFSET)) {
-                Packet packetReceived = packetFromBytes(perIOContext->buffer);
-                if (packetReceived.command == COMMAND_LOGIN) {
-                    DBG_INFO("Thread(%lu) received login packet\n", GetCurrentThreadId());
+            if (IOSize >= PKT_HEADER_SIZE && IOSize >= *(size_t*)(perIOContext + PKT_SIZE_OFFSET)) {
+                TLPacket *tlPacket;
+                if ((parseStatus = packetFromBytes((uint8_t*)perIOContext->buffer, &tlPacket)) != PKT_PARSE_OK) {
+                    DBG_ERROR("Failed to parse packet %s", getParseStatusString(parseStatus));
+                    // TODO discard this packet, send respond, clear read buffer
+                }
+
+                if (tlPacket->command == CMD_LOGIN) {
+                    DBG_DEBUG("Thread (%lu) received login packet", GetCurrentThreadId());
+                    // Process received packet
+                    PacketServerRespond *respondPacket = processLoginPacket(tlPacket, perSocketContext);
+                    respondPacket->tlPacket->id = tlPacket->id;
+
+                    // received tlPacket is not needed anymore
+                    deleteTLPacket(tlPacket);
+
+                    // Packing respond packet
+                    tlPackServerRespond(respondPacket);
+
+                    // Creating io context and moving packet data to its buffer
                     PerIOContext *sendIOContext = allocateIOContext();
-
-                    Packet packetRespond = createPacket(TYPE_RESPOND, COMMAND_LOGIN, STATUS_OK, packetReceived.id);
-                    packPacket(perSocketContext->Socket, packetRespond, NULL);
-
-                    // Fill IO context with needed data to process packed send
                     sendIOContext->IOOperation = IO_OP_WRITE;
-                    sendIOContext->totalBytes = PACKET_HEADER_SIZE;
+                    sendIOContext->totalBytes = respondPacket->tlPacket->size;
                     sendIOContext->sentBytes = 0;
                     sendIOContext->wsabuf.buf = sendIOContext->buffer;
-                    sendIOContext->wsabuf.len = PACKET_HEADER_SIZE;
+                    sendIOContext->wsabuf.len = respondPacket->tlPacket->size;
+                    sendIOContext->tlPacket = respondPacket->tlPacket;
+                    memcpy(sendIOContext->buffer, respondPacket->tlPacket->data, respondPacket->tlPacket->size);
 
-                    memcpy(sendIOContext->buffer, packetRespond.data, PACKET_HEADER_SIZE);
+                    // Posting send event
+                    nRet = WSASend(perSocketContext->Socket, &(sendIOContext->wsabuf), 1,
+                                   &sendNumBytes, flags, &sendIOContext->overlapped, NULL);
 
-                    nRet = WSASend(perSocketContext->Socket, &(sendIOContext->wsabuf), 1, &sendNumBytes, flags, &sendIOContext->overlapped, NULL);
+                    deletePacketServerRespond(respondPacket);
 
                     if (nRet == SOCKET_ERROR && ERROR_IO_PENDING != WSAGetLastError()) {
-                        DBG_ERROR("Thread(%lu) WSASend failed error(%d)\n", GetCurrentThreadId(), WSAGetLastError());
+                        DBG_ERROR("Thread(%lu) WSASend failed error(%d)", GetCurrentThreadId(), WSAGetLastError());
                         closeClient(perSocketContext, false);
                         deleteIOContext(sendIOContext);
                     }
-                } else {
-                    DBG_INFO("Thread(%lu) unknown packet received packet\n", GetCurrentThreadId());
                 }
+            } else {
+                DBG_INFO("Thread(%lu) packet header contains unknown packet type. Discarding client\n", GetCurrentThreadId());
+                closeClient(perSocketContext, false);
             }
 
             // Post receive
@@ -186,7 +206,7 @@ DWORD WINAPI workerThread(LPVOID arg)
                        &(perSocketContext->pIOContext->overlapped), NULL);
             break;
         case IO_OP_WRITE:
-            DBG_INFO("Thread(%lu) sent %d bytes\n", GetCurrentThreadId(), IOSize);
+            DBG_DEBUG("Thread(%lu) sent %d bytes\n", GetCurrentThreadId(), IOSize);
             perIOContext->IOOperation = IO_OP_WRITE;
             perIOContext->sentBytes += IOSize;
             flags = 0;
@@ -207,7 +227,7 @@ DWORD WINAPI workerThread(LPVOID arg)
                 }
             } else {
                 // Previous write operation completed
-                DBG_INFO("Thread(%lu) sent all respond\n", GetCurrentThreadId(), IOSize);
+                DBG_DEBUG("Thread(%lu) send completed\n", GetCurrentThreadId(), IOSize);
                 deleteIOContext(perIOContext);
             }
             break;
@@ -259,6 +279,7 @@ PerSocketContext *allocateSocketContext(SOCKET socket, IO_Operation clientIO)
             perSocketContext->Socket = socket;
             perSocketContext->pCtxtBack = NULL;
             perSocketContext->pCtxtForward = NULL;
+            perSocketContext->nickname = NULL;
 
             perSocketContext->pIOContext->overlapped.Internal = 0;
             perSocketContext->pIOContext->overlapped.InternalHigh = 0;
@@ -269,6 +290,7 @@ PerSocketContext *allocateSocketContext(SOCKET socket, IO_Operation clientIO)
             perSocketContext->pIOContext->IOContextForward = NULL;
             perSocketContext->pIOContext->totalBytes = 0;
             perSocketContext->pIOContext->sentBytes  = 0;
+            perSocketContext->pIOContext->tlPacket = NULL;
             perSocketContext->pIOContext->wsabuf.buf  = perSocketContext->pIOContext->buffer;
             perSocketContext->pIOContext->wsabuf.len  = sizeof(perSocketContext->pIOContext->buffer);
 
@@ -304,6 +326,8 @@ void closeClient(PerSocketContext *perSocketContext, bool graceful)
         }
         closesocket(perSocketContext->Socket);
         perSocketContext->Socket = INVALID_SOCKET;
+        if (perSocketContext->nickname)
+            free(perSocketContext->nickname);
         deleteFromSocketContextList(perSocketContext);
         perSocketContext = NULL;
     } else {
@@ -392,15 +416,17 @@ void deleteFromSocketContextList(PerSocketContext *perSocketContext)
 
 void deleteIOContext(PerIOContext *perIOContext)
 {
-     if (g_shutDown)
-         while (!HasOverlappedIoCompleted((LPOVERLAPPED)&perIOContext)) Sleep(0);
-     free(perIOContext);
+    if (perIOContext->tlPacket)
+        deleteTLPacket(perIOContext->tlPacket);
+    if (g_shutDown)
+        while (!HasOverlappedIoCompleted((LPOVERLAPPED)&perIOContext)) Sleep(0);
+    free(perIOContext);
 }
 
 PerIOContext *allocateIOContext()
 {
-    PerIOContext *perSocketContext = NULL;
-    perSocketContext = malloc(sizeof(*perSocketContext));
-    ZeroMemory(perSocketContext, sizeof(*perSocketContext));
-    return perSocketContext;
+    PerIOContext *perIOContext = NULL;
+    perIOContext = malloc(sizeof(*perIOContext));
+    ZeroMemory(perIOContext, sizeof(*perIOContext));
+    return perIOContext;
 }

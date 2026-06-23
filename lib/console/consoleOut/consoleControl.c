@@ -98,7 +98,7 @@ bool enableVirtualProcessing(bool enable)
     HANDLE stdHandle = GetStdHandle(STD_OUTPUT_HANDLE);
 
     if (!GetConsoleMode(stdHandle, &consoleMode)) {
-        DBG_ERROR("Can't get console mode\n");
+        DBG_ERROR("Can't get console mode");
         return false;
     }
 
@@ -108,7 +108,7 @@ bool enableVirtualProcessing(bool enable)
         consoleMode &= ~ENABLE_VIRTUAL_TERMINAL_PROCESSING;
 
     if (!SetConsoleMode(stdHandle, consoleMode)) {
-        DBG_ERROR("Can't set console mode\n");
+        DBG_ERROR("Can't set console mode");
         return false;
     }
 
@@ -121,7 +121,7 @@ bool disableSelection(bool disable)
     HANDLE stdHandle = GetStdHandle(STD_INPUT_HANDLE);
 
     if (!GetConsoleMode(stdHandle, &consoleMode)) {
-        DBG_ERROR("Can't get console mode\n");
+        DBG_ERROR("Can't get console mode");
         return false;
     }
 
@@ -133,7 +133,7 @@ bool disableSelection(bool disable)
         consoleMode &= ENABLE_QUICK_EDIT_MODE | ENABLE_EXTENDED_FLAGS;
 
     if (!SetConsoleMode(stdHandle, consoleMode)) {
-        DBG_ERROR("Can't set console mode\n");
+        DBG_ERROR("Can't set console mode");
         logWinError(GetLastError());
         return false;
     }

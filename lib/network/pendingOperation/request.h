@@ -6,11 +6,10 @@
 #include <windows.h>
 
 #define MAX_PENDING_REQUESTS 100
-#define MAX_NOTIFICATIONS 100
 
 typedef struct sPendingRequest
 {
-    int id;
+    uint16_t id;
 
     HANDLE mutex;
     HANDLE event;
@@ -25,11 +24,11 @@ typedef struct sRequestSlot
     uint16_t gen;
 } RequestSlot;
 
-
+void            initRequests(void);
 Request         *createRequest(void);
-void            deleteRequest(Request **request);
-void            writeToRequest(Request *request, uint8_t *data, size_t size);
+void            deleteRequest(Request *request);
+void            associateRequest(TLPacket *packet, Request *request);
 
-extern RequestSlot  requests[MAX_PENDING_REQUESTS];
+extern RequestSlot  requestsSlots[MAX_PENDING_REQUESTS];
 
 #endif //RADIKCHAT_REQUESTMANAGER_H

@@ -20,6 +20,8 @@
 #include <ws2tcpip.h>
 #include "client.h"
 
+#include "request.h"
+
 #define BUFSIZE 1024
 #define SERVER_ADDRESS "192.168.0.184"
 #define SERVER_PORT "1423"
@@ -52,6 +54,7 @@ int main(void)
     socketThreadRunMutex = CreateMutex(NULL, TRUE, NULL);
 
     initConsole();
+    initRequests();
     // Set fixed console size
     if (getConsoleWidth() < 119 || getConsoleHeight() < 29) {
         printf("Invalid console size %dx%d.\nPlease, resize to 119x29 or larger size and start the program again.\n",
