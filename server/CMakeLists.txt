@@ -17,6 +17,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 		NetworkPacket
 		ConsoleOut
 		Queue
+		SQLite
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
