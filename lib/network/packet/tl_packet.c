@@ -1,6 +1,6 @@
-#include "tlPacket.h"
+#include "tl_packet.h"
 
-#include "consoleOutput.h"
+#include "console_output.h"
 #include "debug.h"
 
 #include <stdlib.h>

@@ -1,7 +1,7 @@
-#include "consoleInput.h"
+#include "console_input.h"
 
-#include "consoleControl.h"
-#include "consoleOutput.h"
+#include "console_control.h"
+#include "console_output.h"
 #include <conio.h>
 #include <string.h>
 

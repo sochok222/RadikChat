@@ -1,16 +1,16 @@
-#include "packetProcessor.h"
 #include "server.h"
+#include "packet_processor.h"
 
-#include "consoleControl.h"
+#include "console_control.h"
 #include "packet.h"
-#include "serverUtils.h"
+#include "server_utils.h"
 
 #include "queue.h"
 #include <debug.h>
 #include <process.h>
-#include <socketUtils.h>
+#include <socket_utils.h>
 #include <stdio.h>
-#include <tlPacket.h>
+#include <tl_packet.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
 

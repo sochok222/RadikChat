@@ -1,8 +1,8 @@
-#include "serverUtils.h"
-#include "packetProcessor.h"
-#include <debug.h>
+#include "packet_processor.h"
 #include "server.h"
-#include <tlPacket.h>
+#include "server_utils.h"
+#include <debug.h>
+#include <tl_packet.h>
 
 static bool send_message(ClientInfo *from, ClientInfo *to, const char *message);
 

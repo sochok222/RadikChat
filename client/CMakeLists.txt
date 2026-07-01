@@ -4,12 +4,12 @@ project(Client)
 set(${PROJECT_NAME}_src
         client.h
         client.c
-        clientUtils.c
-        clientUtils.h
-        chatsManager.c
-        chatsManager.h
-        contactsManager.c
-        contactsManager.h
+        client_utils.c
+        client_utils.h
+        chats_manager.c
+        chats_manager.h
+        contacts_manager.c
+        contacts_manager.h
 )
 
 add_executable(${PROJECT_NAME} ${${PROJECT_NAME}_src})

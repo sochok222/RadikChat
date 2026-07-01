@@ -3,7 +3,7 @@
 
 #include "contact.h"
 
-#include <tlPacket.h>
+#include <tl_packet.h>
 #include <ws2tcpip.h>
 
 extern SOCKET socket_server;

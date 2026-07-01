@@ -1,7 +1,7 @@
 #ifndef RADIKCHAT_SERVER_H
 #define RADIKCHAT_SERVER_H
 
-#include "tlPacket.h"
+#include "tl_packet.h"
 
 #include <mswsock.h>
 #define MAX_BUFFER_SIZE 4096

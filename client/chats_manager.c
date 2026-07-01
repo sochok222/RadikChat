@@ -1,4 +1,4 @@
-#include "chatsManager.h"
+#include "chats_manager.h"
 
 #include "client.h"
 
@@ -10,10 +10,10 @@
 #include <windows.h>
 #include <ws2tcpip.h>
 
-#include "clientUtils.h"
-#include "consoleInput.h"
-#include "consoleOutput.h"
-#include "contactsManager.h"
+#include "client_utils.h"
+#include "console_input.h"
+#include "console_output.h"
+#include "contacts_manager.h"
 #include "packet.h"
 
 #include <process.h>

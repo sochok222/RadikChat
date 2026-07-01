@@ -1,24 +1,24 @@
 #define _WIN32_WINNT 0x0500
 #include <windows.h>
 
-#include "chatsManager.h"
+#include "chats_manager.h"
 #define LOG_TO_FILE
-#include "clientUtils.h"
-#include "consoleControl.h"
-#include "consoleInput.h"
-#include "consoleOutput.h"
-#include "contactsManager.h"
+#include "client_utils.h"
+#include "console_control.h"
+#include "console_input.h"
+#include "console_output.h"
+#include "contacts_manager.h"
 
+#include "client.h"
 #include <conio.h>
 #include <debug.h>
 #include <process.h>
-#include <socketUtils.h>
+#include <socket_utils.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <synchapi.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
-#include "client.h"
 
 #include "request.h"
 

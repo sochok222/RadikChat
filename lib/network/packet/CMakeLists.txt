@@ -4,8 +4,8 @@ project(NetworkPacket LANGUAGES C)
 set(${PROJECT_NAME}_src
         packet.c
         packet.h
-        tlPacket.c
-        tlPacket.h
+        tl_packet.c
+        tl_packet.h
 )
 
 add_library(${PROJECT_NAME} STATIC ${${PROJECT_NAME}_src})

@@ -1,11 +1,11 @@
-#include "clientUtils.h"
+#include "client_utils.h"
 
-#include "chatsManager.h"
+#include "chats_manager.h"
 #include "client.h"
-#include "consoleOutput.h"
-#include "contactsManager.h"
-#include "tlPacket.h"
+#include "console_output.h"
+#include "contacts_manager.h"
 #include "request.h"
+#include "tl_packet.h"
 
 #include <debug.h>
 #include <process.h>

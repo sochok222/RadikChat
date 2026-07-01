@@ -1,8 +1,8 @@
 #ifndef RADIKCHAT_REQUESTMANAGER_H
 #define RADIKCHAT_REQUESTMANAGER_H
 
-#include <tlPacket.h>
 #include <stdint.h>
+#include <tl_packet.h>
 #include <windows.h>
 
 #define MAX_PENDING_REQUESTS 100

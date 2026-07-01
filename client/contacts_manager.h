@@ -1,7 +1,7 @@
 #ifndef RADIKCHAT_CONTACTSMANAGER_H
 #define RADIKCHAT_CONTACTSMANAGER_H
 
-#include "chatsManager.h"
+#include "chats_manager.h"
 
 Contact *create_contact(const char *nickname);
 Contact *find_contact(const char *nickname);

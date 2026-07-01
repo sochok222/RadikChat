@@ -4,10 +4,10 @@ project(Server LANGUAGES C)
 set(${PROJECT_NAME}_src
 		server.h
 		server.c
-		serverUtils.h
-		serverUtils.c
-        packetProcessor.c
-        packetProcessor.h
+		server_utils.h
+		server_utils.c
+		packet_processor.c
+		packet_processor.h
 )
 
 add_executable(${PROJECT_NAME} ${${PROJECT_NAME}_src})

@@ -1,12 +1,7 @@
 cmake_minimum_required(VERSION 3.28)
 project(SQLite)
 
-set (${PROJECT_NAME}_src
-        sqlite3.h
-        sqlite3ext.h
-)
-
-add_library(${PROJECT_NAME} INTERFACE ${${PROJECT_NAME}_src})
+add_library(${PROJECT_NAME} INTERFACE)
 
 target_include_directories(${PROJECT_NAME}
         INTERFACE

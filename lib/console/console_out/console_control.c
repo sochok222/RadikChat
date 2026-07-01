@@ -1,7 +1,7 @@
-#include "consoleControl.h"
+#include "console_control.h"
 
-#include "consoleInput.h"
-#include "consoleOutput.h"
+#include "console_input.h"
+#include "console_output.h"
 
 #include <inttypes.h>
 #include <stdio.h>

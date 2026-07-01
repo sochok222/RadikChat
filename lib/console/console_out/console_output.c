@@ -1,6 +1,6 @@
-#include "consoleOutput.h"
+#include "console_output.h"
 
-#include "consoleControl.h"
+#include "console_control.h"
 #include "debug.h"
 
 #include <process.h>

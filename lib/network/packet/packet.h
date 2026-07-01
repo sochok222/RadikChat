@@ -1,6 +1,6 @@
 #ifndef RADIKCHAT_PACKET_H
 #define RADIKCHAT_PACKET_H
-#include "tlPacket.h"
+#include "tl_packet.h"
 
 typedef uint64_t receiver_id;
 

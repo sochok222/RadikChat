@@ -1,6 +1,6 @@
-#include "contactsManager.h"
-#include <debug.h>
 #include "client.h"
+#include "contacts_manager.h"
+#include <debug.h>
 
 static void init_chat_history(ChatHistory *chat_history);
 

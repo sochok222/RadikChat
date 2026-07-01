@@ -4,12 +4,12 @@ project(ConsoleOut LANGUAGES C)
 set(${PROJECT_NAME}_src
         debug.h
         debug.c
-        consoleControl.h
-        consoleControl.c
-        consoleOutput.h
-        consoleOutput.c
-        consoleInput.h
-        consoleInput.c
+        console_control.h
+        console_control.c
+		console_output.h
+		console_output.c
+		console_input.h
+		console_input.c
 )
 
 add_library(${PROJECT_NAME} STATIC ${${PROJECT_NAME}_src})
