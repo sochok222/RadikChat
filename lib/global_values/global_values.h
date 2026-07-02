@@ -1,0 +1,7 @@
+#ifndef RADIKCHAT_SERVER_GLOBAL_VALUES_H
+#define RADIKCHAT_SERVER_GLOBAL_VALUES_H
+
+#define SERVER_DATABASE_PATH "./server_database.db"
+#define CLIENT_DATABASE_PATH "./client_database.db"
+
+#endif //RADIKCHAT_SERVER_GLOBAL_VALUES_H
