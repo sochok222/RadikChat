@@ -20,6 +20,8 @@
 #include <winsock2.h>
 #include <ws2tcpip.h>
 
+#include "../lib/global_values/global_values.h"
+#include "client_database.h"
 #include "request.h"
 
 #define BUFSIZE 1024
@@ -55,6 +57,7 @@ int main(void)
 
     init_console();
     init_requests();
+    init_client_database(CLIENT_DATABASE_PATH);
     // Set fixed console size
     if (get_console_width() < 119 || get_console_height() < 29) {
         printf("Invalid console size %dx%d.\nPlease, resize to 119x29 or larger size and start the program again.\n",

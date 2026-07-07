@@ -20,4 +20,5 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         ConsoleOut
         Types
         PendingOperation
+        ClientDatabase
 )
