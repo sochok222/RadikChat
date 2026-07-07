@@ -21,6 +21,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 		SQLite
 		ServerDatabase
 		GlobalValues
+		OpenSSL
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
