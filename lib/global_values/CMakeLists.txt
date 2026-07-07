@@ -5,6 +5,6 @@ project(GlobalValues)
 add_library(GlobalValues INTERFACE)
 
 target_include_directories(${PROJECT_NAME}
-        PUBLIC
+        INTERFACE
         ${CMAKE_CURRENT_SOURCE_DIR}
 )

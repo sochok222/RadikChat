@@ -130,7 +130,7 @@ void log_message(int mode, const char *format, ...)
         vsprintf(buffer, format, args);
 	va_end(args);
     WriteConsoleA(h_out, buffer, strlen(buffer), NULL, NULL);
-    // fflush(out);
+    // fflush(h_out);
 
     set_text_color(formatDefault);
 }

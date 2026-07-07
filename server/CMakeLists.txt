@@ -4,6 +4,7 @@ project(Server LANGUAGES C)
 set(${PROJECT_NAME}_src
 		server.h
 		server.c
+		test.c
 		server_utils.h
 		server_utils.c
 		packet_processor.c
@@ -18,6 +19,8 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 		ConsoleOut
 		Queue
 		SQLite
+		ServerDatabase
+		GlobalValues
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
