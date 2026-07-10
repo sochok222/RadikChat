@@ -2,15 +2,18 @@
 #include "packet_processor.h"
 
 #include "console_control.h"
+#include "debug.h"
+#include "global_values.h"
 #include "packet.h"
-#include "server_utils.h"
-
 #include "queue.h"
-#include <debug.h>
+#include "server_database.h"
+#include "server_utils.h"
+#include "socket_utils.h"
+#include "tl_packet.h"
+
 #include <process.h>
-#include <socket_utils.h>
+#include <signal.h>
 #include <stdio.h>
-#include <tl_packet.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
 
@@ -18,48 +21,49 @@
 #define MAX_THREAD_HANDLES 100
 #define BACKLOG 10
 
-SOCKET              g_socket_listen;
+SOCKET              g_listen_socket;
 CRITICAL_SECTION    g_critical_section;
 DWORD               g_thread_count;
 HANDLE              g_thread_handles[MAX_THREAD_HANDLES];
 HANDLE              g_iocp;
 PerSocketContext    *g_clients = NULL;
 bool                g_shut_down = false;
+HANDLE              g_shutdown_event;
+LPFN_ACCEPTEX       acceptex = NULL;
 
 int _cdecl main(int argc, char **argv)
 {
     init_debug(NULL);
-    set_alternate_console_buffer(true);
     enable_virtual_processing(true);
-    DBG_INFO("Starting server...");
-    WSADATA wsadata;
-    SYSTEM_INFO system_info;
-    SOCKET accept_socket;
-    PerSocketContext *per_socket_context = NULL;
-    DWORD recv_num_bytes = 0;
-    DWORD flags = 0;
-    int n_ret = 0;
-
-    DBG_DEBUG("Initializing winsock...");
-    if (WSAStartup(MAKEWORD(2, 2), &wsadata) != 0) {
-        fprintf(stderr, "Error: Failed to initialize winsock\n");
-        return 1;
-    }
-
-    GetSystemInfo(&system_info);
-    g_thread_count = system_info.dwNumberOfProcessors * 2;
-
+    set_alternate_console_buffer(true);
     InitializeCriticalSection(&g_critical_section);
+    DBG_INFO("Starting server...");
+    init_server_database(SERVER_DATABASE_PATH);
+
+    g_shutdown_event = CreateEvent(NULL, false, false, NULL);
 
     for (int i = 0; i < MAX_THREAD_HANDLES; i++) {
         g_thread_handles[i] = INVALID_HANDLE_VALUE;
     }
 
+    DBG_DEBUG("Initializing winsock...");
+    WSADATA wsadata;
+    if (WSAStartup(MAKEWORD(2, 2), &wsadata) != 0) {
+        fprintf(stderr, "Error: Failed to initialize winsock\n");
+        return 1;
+    }
+
+    // Create global completion port
     g_iocp = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
     if (g_iocp == INVALID_HANDLE_VALUE) {
         DBG_FATAL("CreateIoCompletionPort() failed to create completion port: %d", GetLastError());
         return 1;
     }
+
+    // Get count of cores in cpu
+    SYSTEM_INFO system_info;
+    GetSystemInfo(&system_info);
+    g_thread_count = system_info.dwNumberOfProcessors * 2;
 
     // Create worker threads that will service overlapped IO packets
     DBG_DEBUG("Creating %d threads...", g_thread_count);
@@ -71,37 +75,74 @@ int _cdecl main(int argc, char **argv)
         }
     }
 
-    g_socket_listen = create_passive_socket(PORT, SOCK_STREAM, AF_INET, BACKLOG);
-    if (g_socket_listen == INVALID_SOCKET) {
+    g_listen_socket = create_passive_socket(PORT, SOCK_STREAM, AF_INET, BACKLOG);
+    if (g_listen_socket == INVALID_SOCKET) {
         DBG_FATAL("create_passive_socket() failed to create socket: %d", GetLastError());
         return 1;
     }
 
     // Loop forever to accept incoming connections
-    while (true) {
-        accept_socket = WSAAccept(g_socket_listen, NULL, NULL, NULL, 0);
-        if (accept_socket == INVALID_SOCKET) {
-            DBG_FATAL("WSAAccept() failed to create accept_socket: %d", GetLastError());
-            return 1;
-        }
+    PerSocketContext *per_socket_context = NULL;
+    DWORD recv_num_bytes = 0;
+    DWORD flags = 0;
+    int n_ret = 0;
 
-        // Add returned socket to the IOCP; allocate and add context
-        // data to global list of context structures
-        per_socket_context = update_completion_port(accept_socket, IO_OP_READ, true);
-        if (per_socket_context == NULL) {
-            DBG_FATAL("update_completion_port() failed to update completion port: %d", GetLastError());
-            return 1;
-        }
+    // Add listen socket to the completion port
+    per_socket_context = update_completion_port(g_listen_socket, IO_OP_ACCEPT, true);
 
-        // Post initial receive on this socket
-        n_ret = WSARecv(accept_socket, &(per_socket_context->io_context->wsabuf),
-                       1, &recv_num_bytes, &flags,
-                       &(per_socket_context->io_context->overlapped), NULL);
-        if (n_ret == SOCKET_ERROR && ERROR_IO_PENDING != WSAGetLastError()) {
-            DBG_FATAL("WSARecv() failed: %d", WSAGetLastError());
-            close_client(per_socket_context, false);
-        }
+    // Get AcceptEx function pointer
+    GUID acceptex_guid = WSAID_ACCEPTEX;
+    DWORD num_bytes = 0;
+    n_ret = WSAIoctl(g_listen_socket, SIO_GET_EXTENSION_FUNCTION_POINTER,
+                     &acceptex_guid, sizeof(acceptex_guid),
+                     &acceptex, sizeof(acceptex),
+                     &num_bytes, NULL, NULL);
+    if (n_ret == SOCKET_ERROR) {
+        DBG_FATAL("WSAIoctl failed with error code %d", WSAGetLastError());
+        log_wsa_error(WSAGetLastError());
+        goto exit;
     }
+
+    // Post initial accept
+    SOCKET accept_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    per_socket_context->accept_socket = accept_socket;
+    bool ret_val = acceptex(g_listen_socket, accept_socket, per_socket_context->io_context->buffer,
+        0, sizeof(struct sockaddr_in) + 16, sizeof(struct sockaddr_in) + 16,
+        &per_socket_context->io_context->total_bytes, &per_socket_context->io_context->overlapped);
+    if (ret_val == false && WSAGetLastError() != WSA_IO_PENDING) {
+        DBG_FATAL("Failed to post initial acceptex! Error %d", WSAGetLastError());
+        log_wsa_error(WSAGetLastError());
+        goto exit;
+    }
+    DBG_INFO("Successfully posted initial accept");
+    WaitForSingleObject(g_shutdown_event, INFINITE);
+
+    // while (false) {
+    //     accept_socket = WSAAccept(g_listen_socket, NULL, NULL, NULL, 0);
+    //     if (accept_socket == INVALID_SOCKET) {
+    //         DBG_FATAL("WSAAccept() failed to create accept_socket: %d", GetLastError());
+    //         return 1;
+    //     }
+    //
+    //     // Add returned socket to the IOCP; allocate and add context
+    //     // data to global list of context structures
+    //     per_socket_context = update_completion_port(accept_socket, IO_OP_READ, true);
+    //     if (per_socket_context == NULL) {
+    //         DBG_FATAL("update_completion_port() failed to update completion port: %d", GetLastError());
+    //         return 1;
+    //     }
+    //
+    //     // Post initial receive on this socket
+    //     n_ret = WSARecv(accept_socket, &(per_socket_context->io_context->wsabuf),
+    //                    1, &recv_num_bytes, &flags,
+    //                    &(per_socket_context->io_context->overlapped), NULL);
+    //     if (n_ret == SOCKET_ERROR && ERROR_IO_PENDING != WSAGetLastError()) {
+    //         DBG_FATAL("WSARecv() failed: %d", WSAGetLastError());
+    //         close_client(per_socket_context, false);
+    //     }
+    // }
+
+    exit:
 
     return 0;
 }
@@ -140,14 +181,15 @@ DWORD WINAPI worker_thread(LPVOID arg)
             return 0;
         }
 
-        if (!success || (success && (io_size == 0))) {
-            DBG_ERROR("Thread (%d) IOSize == 0, Error code (%d)");
+        per_io_context = (PerIOContext*)overlapped;
+        if ( (!success || (success && (io_size == 0))) && per_io_context->io_operation != IO_OP_ACCEPT ) {
+            DBG_WARNING("Thread (%d) IOSize == 0, Error code (%d)");
+            log_wsa_error(WSAGetLastError());
             close_client(per_socket_context, false);
             continue;
         }
 
         // Determine what type of IO packet has completed
-        per_io_context = (PerIOContext*)overlapped;
         switch (per_io_context->io_operation) {
         case IO_OP_READ: // TODO handle partial read
             // A read operation has completed, process received packet and post another action on the socket
@@ -205,6 +247,7 @@ DWORD WINAPI worker_thread(LPVOID arg)
                        1, &recv_num_bytes, &flags,
                        &(per_socket_context->io_context->overlapped), NULL);
             break;
+
         case IO_OP_WRITE:
             DBG_DEBUG("Thread(%lu) sent %d bytes\n", GetCurrentThreadId(), io_size);
             per_io_context->io_operation = IO_OP_WRITE;
@@ -229,6 +272,49 @@ DWORD WINAPI worker_thread(LPVOID arg)
                 // Previous write operation completed
                 DBG_DEBUG("Thread(%lu) send completed\n", GetCurrentThreadId(), io_size);
                 delete_io_context(per_io_context);
+            }
+            break;
+
+        case IO_OP_ACCEPT:
+            DBG_DEBUG("Thread(%lu) accepting new connection\n", GetCurrentThreadId());
+            SOCKET accept_socket = per_socket_context->accept_socket;
+            if (accept_socket == INVALID_SOCKET) {
+                DBG_FATAL("acceptex() failed to create accept_socket: %d", GetLastError());
+                // TODO do not add socket to the global sockets list and post next acceptex
+                exit(1); // TEMPORARY
+            }
+
+            // Add new socket to the IOCP
+            // allocate and add context data to global list of context structures
+            PerSocketContext *new_connection_socket_context = update_completion_port(accept_socket, IO_OP_READ, true);
+            if (new_connection_socket_context == NULL) {
+                DBG_FATAL("update_completion_port() failed to update completion port: %d", GetLastError());
+                // FATAL ERROR, close all connections, handles, deallocate all allocated memory
+                exit(1); // TEMPORARY
+            }
+
+            // Post initial receive on new socket
+            n_ret = WSARecv(accept_socket, &(new_connection_socket_context->io_context->wsabuf),
+                           1, &recv_num_bytes, &flags,
+                           &(new_connection_socket_context->io_context->overlapped), NULL);
+            if (n_ret == SOCKET_ERROR && ERROR_IO_PENDING != WSAGetLastError()) {
+                DBG_FATAL("WSARecv() failed: %d", WSAGetLastError());
+                close_client(new_connection_socket_context, false);
+            }
+
+            // SOCKET for upcoming connection
+            SOCKET new_connection_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+
+            // Post next accept
+            per_socket_context->accept_socket = new_connection_socket;
+            bool ret_val = acceptex(g_listen_socket, new_connection_socket, per_socket_context->io_context->buffer,
+                                    0, sizeof(struct sockaddr_in) + 16, sizeof(struct sockaddr_in) + 16,
+                                    &per_socket_context->io_context->total_bytes, &per_socket_context->io_context->overlapped);
+            if (ret_val == false && WSAGetLastError() != WSA_IO_PENDING) {
+                DBG_FATAL("Failed to post acceptex! Error %d", WSAGetLastError());
+                log_wsa_error(WSAGetLastError());
+                // TODO terminate server
+                exit(1); // TEMPORARY
             }
             break;
         default: break;
@@ -280,6 +366,7 @@ PerSocketContext *allocate_socket_context(SOCKET socket, IO_Operation client_io)
             per_socket_context->ctxt_back = NULL;
             per_socket_context->ctxt_forward = NULL;
             per_socket_context->nickname = NULL;
+            per_socket_context->accept_socket = INVALID_SOCKET;
 
             per_socket_context->io_context->overlapped.Internal = 0;
             per_socket_context->io_context->overlapped.InternalHigh = 0;

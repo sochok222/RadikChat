@@ -18,7 +18,7 @@ typedef struct sPerIOContext
     WSAOVERLAPPED   overlapped;
     char            buffer[MAX_BUFFER_SIZE];
     WSABUF          wsabuf;
-    uint32_t        total_bytes;
+    DWORD           total_bytes;
     DWORD           sent_bytes;
     IO_Operation    io_operation;
     SOCKET          socket_accept;
@@ -32,6 +32,12 @@ typedef struct sPerSocketContext {
     char                        *nickname;
     PerIOContext                *io_context;
     CRITICAL_SECTION            io_critical_section;
+
+    // These sockets are used only for IO_OP_ACCEPT
+    // accept_socket -> socket which accepted
+    // NOTE during other IO operations this field is not used
+    SOCKET                      accept_socket;
+
     struct sPerSocketContext    *ctxt_back;
     struct sPerSocketContext    *ctxt_forward;
 } PerSocketContext;
