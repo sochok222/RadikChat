@@ -3,11 +3,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <windows.h>
-
-/************************************************ 
- * This translation unit created for colorful	*
- * debugging					                *
- ************************************************/
+#include "queue.h"
 
 #define ESC "\x1b"
 #define CSI "\x1b["
@@ -17,12 +13,16 @@
 PRIVATE FILE *f_out, *m_stdout, *m_stderr;
 PRIVATE bool to_console;
 PRIVATE HANDLE h_out;
+PRIVATE HANDLE log_semaphore;
+
+PRIVATE int get_color_string(char *buffer, TextFormat color);
 
 bool init_debug(const char *log_file)
 {
     f_out = NULL;
     to_console = log_file == NULL;
     h_out = GetStdHandle(STD_OUTPUT_HANDLE);
+    log_semaphore = CreateSemaphore(NULL, 0, 100, NULL);
 
     if (log_file != NULL) {
         if ((f_out = fopen(log_file, "a")) == NULL) {
@@ -55,13 +55,7 @@ void log_wsa_error(unsigned long error_code)
 		);
 
 	if (error_string != NULL) {
-		fprintf(m_stderr, "Error message: ");
-
-	    // Red text, default bg
-	    set_text_color(fgRed | bgDefault);
-	    fprintf(m_stderr, "%S", error_string);
-	    set_text_color(formatDefault);
-
+	    DBG_ERROR("[WSAERROR]: %S\n", error_string);
 		LocalFree(error_string);
 	}
 	else {
@@ -86,10 +80,7 @@ void log_win_error(unsigned long error_code)
         ExitProcess(error_code);
     }
 
-    set_text_color(fgRed | bgDefault);
-    fprintf(m_stderr, "[WINERROR]: %S", error_string);
-    set_text_color(formatDefault);
-    fflush(m_stderr);
+    DBG_ERROR("[WINERROR]: %S\n", error_string);
 
     LocalFree(error_string);
 }
@@ -101,24 +92,26 @@ void log_message(int mode, const char *format, ...)
 	va_list args;
 	FILE *out;
 
+    int offset = 0;
 	switch (mode) {
 		case DBG_MODE_FATAL:
-	        set_text_color(formatError);
+	        offset += get_color_string(buffer, formatError);
 			out = m_stderr;
 			break;
 		case DBG_MODE_ERROR:
-	        set_text_color(formatError);
+	        offset += get_color_string(buffer, formatError);
 			out = m_stderr;
 			break;
 		case DBG_MODE_WARNING:
-	        set_text_color(formatError);
+	        offset += get_color_string(buffer, formatError);
 			out = m_stderr;
 			break;
 		case DBG_MODE_INFO:
-	        set_text_color(formatNotification);
+	        offset += get_color_string(buffer, formatNotification);
 			out = m_stdout;
 			break;
 		default:
+	        offset += get_color_string(buffer, formatDefault);
 			out = m_stdout;
 			break;
 	}
@@ -127,12 +120,11 @@ void log_message(int mode, const char *format, ...)
     // Because call on printf from multiple thread can cause av.
     // WriteConsole is buffered
 	va_start(args, format);
-        vsprintf(buffer, format, args);
+        vsprintf(buffer + offset, format, args);
 	va_end(args);
     WriteConsoleA(h_out, buffer, strlen(buffer), NULL, NULL);
+    // fprintf(m_stderr, "%s", buffer);
     // fflush(h_out);
-
-    set_text_color(formatDefault);
 }
 
 void set_text_color(TextFormat color)
@@ -156,7 +148,27 @@ void set_text_color(TextFormat color)
 
     strcat(buffer, "m");
 
-    printf(buffer);
+    printf("%s", buffer);
+}
+
+PRIVATE int get_color_string(char *buffer, TextFormat color)
+{
+    strcpy(buffer, CSI);
+    if (color & fgRed)
+        strcat(buffer, ";31");
+    if (color & fgGreen)
+        strcat(buffer, ";32");
+    if (color & fgDefault)
+        strcat(buffer, ";39");
+    if (color & bgRed)
+        strcat(buffer, ";41");
+    if (color & bgGreen)
+        strcat(buffer, ";42");
+    if (color & bgDefault)
+        strcat(buffer, ";49");
+
+    strcat(buffer, "m");
+    return strlen(buffer);
 }
 
 void print_time_elapsed(const char *m, time_t start, time_t stop)
