@@ -1,0 +1,4 @@
+#ifndef RADIKCHAT_BOT_H
+#define RADIKCHAT_BOT_H
+
+#endif //RADIKCHAT_BOT_H
