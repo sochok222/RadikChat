@@ -34,6 +34,7 @@ static inline bool create_private_conversations_table(sqlite3 *db);
 
 bool init_server_database(const char *db_path)
 {
+    DBG_DEBUG("Initializing server database...");
     // Open database (create file if not exists)
     sqlite3 *db;
     if (!create_database_connection(db_path, &db)) {
@@ -67,6 +68,7 @@ bool init_server_database(const char *db_path)
     for (register int i = 0; i < sizeof(create_table_fns) / sizeof(create_table_fns[0]); i++) {
         if (!(*create_table_fns[i])(db)) {
             DBG_FATAL("Failed to create table!");
+            sqlite3_close(db);
             return false;
         }
     }

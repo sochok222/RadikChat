@@ -20,6 +20,4 @@ bool disable_selection(bool disable);
 
 void set_cursor_visibility(bool visible);
 
-extern HANDLE console_cursor_mutex;
-
 #endif //RADIKCHAT_CONSOLECONTROL_H

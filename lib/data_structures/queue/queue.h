@@ -6,13 +6,13 @@
 
 #include <synchapi.h>
 
-typedef struct sQueueNode
+typedef struct QueueNode
 {
     int value;
-    struct sQueueNode *next;
+    struct QueueNode *next;
 } QueueNode;
 
-typedef struct sQueue
+typedef struct Queue
 {
     QueueNode *front;
     QueueNode *back;

@@ -4,4 +4,7 @@
 #define SERVER_DATABASE_PATH "./server_database.db"
 #define CLIENT_DATABASE_PATH "./client_database.db"
 
+#define SERVER_ADDRESS "192.168.0.184"
+#define SERVER_PORT "1423"
+
 #endif //RADIKCHAT_SERVER_GLOBAL_VALUES_H

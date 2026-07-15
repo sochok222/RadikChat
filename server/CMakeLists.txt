@@ -20,6 +20,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 		GlobalValues
 		OpenSSL
 		Crypto
+		Miscellaneous
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE

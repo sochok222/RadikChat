@@ -3,7 +3,6 @@
 
 #include "packet.h"
 #include "server.h"
-#include "server_utils.h"
 
 PacketServerRespond *process_login_packet(TLPacket *tl_packet, PerSocketContext *per_socket_context);
 ServerRespond       process_create_chat_packet(PacketCreateChat *packetCreateChat);

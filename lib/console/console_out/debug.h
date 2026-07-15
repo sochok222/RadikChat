@@ -73,6 +73,7 @@ void log_message(int mode, const char *format, ...);
 void log_wsa_error(unsigned long error_code);
 void log_win_error(unsigned long error_code);
 bool init_debug(const char *log_file);
+void deinit_debug();
 void set_text_color(TextFormat color);
 void print_time_elapsed(const char *m, time_t start, time_t stop);
 

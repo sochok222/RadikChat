@@ -1,12 +1,12 @@
 #include "console_output.h"
-
 #include "console_control.h"
 #include "debug.h"
-
+#include "miscellaneous.h"
 #include <process.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <windows.h>
+
 
 #define REQUEST_POS console_height - 1, 0
 #define ESC "\x1b"
@@ -15,10 +15,10 @@
 
 static int console_width, console_height;
 static int main_area_start, main_area_end;
-static char *console_buffer;
-static HANDLE h_std_out;
-static HANDLE console_out_mutex;
-static HANDLE console_out_semaphore;
+static char *console_buffer = NULL;
+static HANDLE h_std_out = INVALID_HANDLE_VALUE;
+static HANDLE console_out_mutex = INVALID_HANDLE_VALUE;
+static HANDLE console_out_semaphore = INVALID_HANDLE_VALUE;
 
 static void write_to_console_buffer(const char *data, size_t size, int row, int col, bool update_screen);
 static void vprint_to_console_buffer(int row, int col, const char *format, va_list args);
@@ -40,6 +40,17 @@ void init_output(int width, int height)
     main_area_end = console_height - 1 - 2;
 
     console_buffer = calloc(console_width * console_height, sizeof(char));
+}
+
+void deinit_output(void)
+{
+    safe_close_handle(h_std_out);
+    safe_close_handle(console_out_semaphore);
+    safe_close_handle(console_out_mutex);
+    if (console_buffer != NULL) {
+        free(console_buffer);
+        console_buffer = NULL;
+    }
 }
 
 int get_main_area_height(void)

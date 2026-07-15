@@ -2,6 +2,7 @@
 
 #include "console_input.h"
 #include "console_output.h"
+#include "miscellaneous.h"
 
 #include <inttypes.h>
 #include <stdio.h>
@@ -11,7 +12,6 @@
 #define PUBLIC
 #define PRIVATE static
 
-HANDLE console_cursor_mutex;
 static int console_width, console_height;
 
 bool init_console_size(void)
@@ -95,7 +95,7 @@ void set_cursor_visibility(bool visible)
 bool enable_virtual_processing(bool enable)
 {
     DWORD console_mode = 0;
-    HANDLE std_handle = GetStdHandle(STD_OUTPUT_HANDLE);
+    HANDLE std_handle = GetStdHandle(STD_OUTPUT_HANDLE); // This handle does not need to be closed
 
     if (!GetConsoleMode(std_handle, &console_mode)) {
         DBG_ERROR("Can't get console mode");
@@ -118,7 +118,7 @@ bool enable_virtual_processing(bool enable)
 bool disable_selection(bool disable)
 {
     DWORD console_mode = 0;
-    HANDLE std_handle = GetStdHandle(STD_INPUT_HANDLE);
+    HANDLE std_handle = GetStdHandle(STD_INPUT_HANDLE); // This handle does not need to be closed
 
     if (!GetConsoleMode(std_handle, &console_mode)) {
         DBG_ERROR("Can't get console mode");

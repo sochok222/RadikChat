@@ -1,19 +1,16 @@
 #include <debug.h>
 #include <stdarg.h>
-#include <stdbool.h>
 #include <stdio.h>
 #include <windows.h>
-#include "queue.h"
 
 #define ESC "\x1b"
 #define CSI "\x1b["
 #define PRIVATE static
 #define PUBLIC
 
-PRIVATE FILE *f_out, *m_stdout, *m_stderr;
+PRIVATE FILE *f_out = nullptr, *m_stdout = nullptr, *m_stderr = nullptr;
 PRIVATE bool to_console;
-PRIVATE HANDLE h_out;
-PRIVATE HANDLE log_semaphore;
+PRIVATE HANDLE h_out = INVALID_HANDLE_VALUE;
 
 PRIVATE int get_color_string(char *buffer, TextFormat color);
 
@@ -22,7 +19,6 @@ bool init_debug(const char *log_file)
     f_out = NULL;
     to_console = log_file == NULL;
     h_out = GetStdHandle(STD_OUTPUT_HANDLE);
-    log_semaphore = CreateSemaphore(NULL, 0, 100, NULL);
 
     if (log_file != NULL) {
         if ((f_out = fopen(log_file, "a")) == NULL) {
@@ -37,6 +33,13 @@ bool init_debug(const char *log_file)
     m_stdout = stdout;
     m_stderr = stderr;
     return true;
+}
+
+void deinit_debug()
+{
+    if (f_out != NULL) {
+        fclose(f_out);
+    }
 }
 
 /* Log wsa error code converted to string with colorful output */
@@ -55,7 +58,7 @@ void log_wsa_error(unsigned long error_code)
 		);
 
 	if (error_string != NULL) {
-	    DBG_ERROR("[WSAERROR]: %S\n", error_string);
+	    DBG_ERROR("[WSAERROR]: (%d) %S\n", error_code, error_string);
 		LocalFree(error_string);
 	}
 	else {
@@ -80,7 +83,7 @@ void log_win_error(unsigned long error_code)
         ExitProcess(error_code);
     }
 
-    DBG_ERROR("[WINERROR]: %S\n", error_string);
+    DBG_ERROR("[WINERROR]: (%d) %S\n", error_code, error_string);
 
     LocalFree(error_string);
 }

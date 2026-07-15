@@ -11,6 +11,7 @@
 #define print_error(...) print_notification(formatError, __VA_ARGS__)
 
 void init_output(int width, int height);
+void deinit_output(void);
 int  get_main_area_height(void);
 void colorful_printf(TextFormat color, const char *format, ...);
 void colorful_v_printf(TextFormat color, const char *format, va_list args);

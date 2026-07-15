@@ -1,10 +1,7 @@
 #include "packet_processor.h"
 #include "server.h"
-#include "server_utils.h"
 #include <debug.h>
 #include <tl_packet.h>
-
-static bool send_message(ClientInfo *from, ClientInfo *to, const char *message);
 
 PacketServerRespond *process_login_packet(TLPacket *tl_packet, PerSocketContext *per_socket_context)
 {
@@ -174,58 +171,4 @@ void process_message_packet(PacketMessage *packet_message)
     //
     // send_packet(client->socket, toSender, NULL);
     // deletePacket(in); deletePacket(toSender);
-}
-
-// TODO add packet resending if send fails
-static bool send_message(ClientInfo *from, ClientInfo *to, const char *message)
-{
-    // TLPacket      in, out;
-    // fd_set      fdRespond;
-    // int         cycle, totalReceived = 0;
-    // char        buffer[100];
-    // in.data = NULL; out.data = NULL;
-    //
-    // // Status and id are ignored
-    // out = createPacket(TYPE_DELIVERY, CMD_MESSAGE, SERV_RESPOND_OK, 0);
-    //
-    // addPacketString(&out, from->nickname);
-    // addPacketString(&out, message);
-    //
-    // send_packet(to->socket, out, NULL);
-    // deletePacket(out);
-    //
-    // // FIXME: this cycle method is unreliable, add handling to select timeout
-    // for (cycle = 0; cycle < 5; cycle++) {
-    //     FD_ZERO(&fdRespond);
-    //     FD_SET(to->socket, &fdRespond);
-    //     if (select(0, &fdRespond, NULL, NULL, NULL) < 0) {
-    //         DBG_FATAL("select() failed.\n");
-    //         log_wsa_error(WSAGetLastError());
-    //         return false;
-    //     }
-    //
-    //     if (FD_ISSET(to->socket, &fdRespond)) {
-    //         int received;
-    //         received = recv(to->socket, buffer + totalReceived, sizeof(buffer) - totalReceived, 0);
-    //
-    //         if (received <= 0 && errno != EAGAIN) {
-    //             DBG_DEBUG("Disconnect from %s client\n", get_client_address(to));
-    //             delete_client(to);
-    //             break;
-    //         }
-    //         totalReceived += received;
-    //
-    //         if (totalReceived >= PKT_HEADER_SIZE) {
-    //             // Expecting only header, without payload
-    //             if (*(size_t*)(buffer + PKT_SIZE_OFFSET) > PKT_HEADER_SIZE) {
-    //                 return false;
-    //             }
-    //             return *(int*)(buffer + PACKET_STATUS_OFFSET) == SERV_RESPOND_OK;
-    //         }
-    //     } else {
-    //         continue;
-    //     }
-    // }
-    //
-    // return false;
 }

@@ -11,7 +11,7 @@ PUBLIC SOCKET create_passive_socket(const TCHAR *port, const int socktype, const
 {
 	struct addrinfo hints, *bind_address = NULL;
 	SOCKET socket_listen = INVALID_SOCKET;
-	int error_code; // For storing error code from WSAGetLastError()
+	int error_code; // store error code from WSAGetLastError()
 	
     DBG_INFO("Configuring server address...");
 	memset(&hints, 0, sizeof(hints));
@@ -63,7 +63,7 @@ failure:
 	if (socket_listen != INVALID_SOCKET)
 		closesocket(socket_listen);
 
-	WSASetLastError(error_code); // Restoring proper error code
+	WSASetLastError(error_code); // Restore proper error code
 
 	return INVALID_SOCKET;
 }
@@ -72,7 +72,7 @@ PUBLIC SOCKET create_active_socket(const TCHAR *host, const TCHAR *port, const i
 {
 	struct addrinfo hints, *peer_address = NULL;
 	SOCKET socket_peer = INVALID_SOCKET;
-	int error_code; // For storing error code from WSAGetLastError()
+	int error_code; // store error code from WSAGetLastError()
 
     DBG_DEBUG("Configuring remote address...");
 	memset(&hints, 0, sizeof(hints));
@@ -92,7 +92,7 @@ PUBLIC SOCKET create_active_socket(const TCHAR *host, const TCHAR *port, const i
 	}
 	
     DBG_DEBUG("Connecting to server...\n");
-	if (connect(socket_peer, peer_address->ai_addr, peer_address->ai_addrlen) != 0) {
+	if (connect(socket_peer, peer_address->ai_addr, (int)peer_address->ai_addrlen) != 0) {
         DBG_ERROR("connect() failed. Error code (%d)\n", WSAGetLastError());
 		error_code = WSAGetLastError();
 		goto failure;
@@ -115,7 +115,7 @@ failure:
 	if (socket_peer != INVALID_SOCKET)
 		closesocket(socket_peer);
 
-	WSASetLastError(error_code); // Restoring proper error code
+	WSASetLastError(error_code); // Restore proper error code
 
 	return INVALID_SOCKET;
 }

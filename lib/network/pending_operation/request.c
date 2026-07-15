@@ -1,6 +1,8 @@
 #include "request.h"
+#include "../../miscellaneous/miscellaneous.h"
 #include "queue.h"
 #include "tl_packet.h"
+
 #include <debug.h>
 
 #define PENDING_REQUEST_BUFFER_SIZE 100
@@ -50,8 +52,8 @@ void delete_request(Request *request)
     free(request->packet);
 
     // Close handles
-    CloseHandle(request->event);
-    CloseHandle(request->mutex);
+    safe_close_handle(request->event);
+    safe_close_handle(request->mutex);
 
     // Mark request slot as free
     g_requests_slots[request->id].request = NULL;
