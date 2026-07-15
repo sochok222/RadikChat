@@ -29,14 +29,17 @@ int main(void)
         return 1;
     }
     choice -= '0';
+    int sock_imm_close = 1;
 
     switch (choice) {
     case 1:
         SOCKET socket;
         while (true) {
             socket = create_active_socket(SERVER_ADDRESS, SERVER_PORT, SOCK_STREAM);
+            setsockopt(socket, SOL_SOCKET, SO_DONTLINGER, (char*)&sock_imm_close, sizeof(sock_imm_close));
             if (socket == INVALID_SOCKET) {
                 DBG_WARNING("Can't connect to the server!");
+                log_wsa_error(WSAGetLastError());
                 return 1;
             }
             closesocket(socket);
