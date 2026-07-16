@@ -70,7 +70,7 @@ bool log_in(const SOCKET socket)
 
     WaitForSingleObject(request->event, INFINITE);
     WaitForSingleObject(request->mutex, INFINITE);
-    TLPacket *tl_respond = request->packet;
+    TlPacket *tl_respond = request->packet;
 
     PacketParseStatus parse_status;
     PacketServerRespond *server_respond = NULL;
@@ -228,7 +228,7 @@ void create_chat(SOCKET socket)
     // DBG_FUNC();
     // Request  *request;
     // char            nickname[NICKNAME_LEN+1];
-    // TLPacket          in, out;
+    // TlPacket          in, out;
     //
     // print_request("Enter nickname or q to quit: ");
     // read_in_buffer(nickname, NICKNAME_LEN);

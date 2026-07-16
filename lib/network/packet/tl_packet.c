@@ -17,9 +17,9 @@
 
 static inline size_t get_size_of_type(int file_type);
 
-TLPacket *alloc_tl_packet()
+TlPacket *alloc_tl_packet()
 {
-    TLPacket *packet = malloc(sizeof(*packet));
+    TlPacket *packet = malloc(sizeof(*packet));
     if (packet == nullptr) {
         DBG_FATAL("Out of memory");
         exit(1);
@@ -32,20 +32,20 @@ TLPacket *alloc_tl_packet()
     return packet;
 }
 
-PacketParseStatus packet_from_bytes(uint8_t *data, TLPacket **packet)
+PacketParseStatus packet_from_bytes(uint8_t *data, TlPacket **packet)
 {
-    TLPacket *result;
+    TlPacket *result;
     if ((result = malloc(sizeof(*result))) == nullptr) {
         DBG_FATAL("Out of memory");
         exit(1);
     }
 
-    result->id = *(uint64_t*)(data + PKT_ID_OFFSET);
+    result->id = *(TlPacketId*)(data + PKT_ID_OFFSET);
 
-    result->command = *(uint32_t*)(data + PKT_COMMAND_OFFSET);
+    result->command = *(TlPacketCommand*)(data + PKT_COMMAND_OFFSET);
 
     result->capacity = 0;
-    result->size = *(uint32_t*)(data + PKT_SIZE_OFFSET);
+    result->size = *(TlPacketSize*)(data + PKT_SIZE_OFFSET);
     result->data = NULL;
 
     if (result->size < PKT_HEADER_SIZE || result->size > PKT_MAX_CAPACITY) {
@@ -64,14 +64,14 @@ PacketParseStatus packet_from_bytes(uint8_t *data, TLPacket **packet)
     return PKT_PARSE_OK;
 }
 
-void delete_tl_packet(TLPacket *packet)
+void delete_tl_packet(TlPacket *packet)
 {
     if (packet->data != NULL)
         free(packet->data);
     free(packet);
 }
 
-void send_packet(SOCKET socket, TLPacket packet, HANDLE *socket_mutex)
+void send_packet(SOCKET socket, TlPacket packet, HANDLE *socket_mutex)
 {
     size_t total_send = 0;
     uint8_t header[PKT_HEADER_SIZE] = { 0 };
@@ -113,7 +113,7 @@ void send_packet(SOCKET socket, TLPacket packet, HANDLE *socket_mutex)
         ReleaseMutex(*socket_mutex);
 }
 
-void tl_pack_header(TLPacket *packet)
+void tl_pack_header(TlPacket *packet)
 {
     size_t offset = 0;
 
@@ -123,7 +123,7 @@ void tl_pack_header(TLPacket *packet)
     memcpy(packet->data + offset, &packet->id, sizeof(packet->id));
 }
 
-void tl_pack_data(int field_type, TLPacket *packet, const void *data)
+void tl_pack_data(int field_type, TlPacket *packet, const void *data)
 {
     size_t field_size;
     if (field_type == PKT_F_STRING)
@@ -146,7 +146,7 @@ void tl_pack_data(int field_type, TLPacket *packet, const void *data)
     packet->size += field_size;
 }
 
-PacketParseStatus read_packet_field(int field_type, TLPacket *packet, uint32_t *read_pos, void *out)
+PacketParseStatus read_packet_field(int field_type, TlPacket *packet, uint32_t *read_pos, void *out)
 {
     size_t field_size;
     if (*read_pos == 0) {
@@ -211,23 +211,23 @@ const char *get_parse_status_string(PacketParseStatus parse_status)
     }
 }
 
-uint16_t tl_packet_get_id(TLPacket *packet)
+uint16_t tl_packet_get_id(TlPacket *packet)
 {
     return packet->id & 0xFFFF;
 }
 
-uint16_t tl_packet_get_gen(TLPacket *packet)
+uint16_t tl_packet_get_gen(TlPacket *packet)
 {
     return packet->id >> 16;
 }
 
-void tl_packet_set_id(TLPacket *packet, uint16_t id)
+void tl_packet_set_id(TlPacket *packet, uint16_t id)
 {
     packet->id &= ~0xFFFF;
     packet->id |= id;
 }
 
-void tl_packet_set_gen(TLPacket *packet, uint16_t gen)
+void tl_packet_set_gen(TlPacket *packet, uint16_t gen)
 {
     packet->id &= ~0xFFFF0000;
     packet->id |= (gen << 16);

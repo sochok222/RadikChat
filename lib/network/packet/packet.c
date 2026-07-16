@@ -1,7 +1,7 @@
 #include "packet.h"
 #include "debug.h"
 
-PacketParseStatus tl_unpack_login(TLPacket *tl_packet, PacketLogin **packet_login)
+PacketParseStatus tl_unpack_login(TlPacket *tl_packet, PacketLogin **packet_login)
 {
     bool new_packet = false;
     PacketLogin *result;
@@ -70,7 +70,7 @@ void delete_packet_login(PacketLogin *packet_login)
     free(packet_login);
 }
 
-PacketParseStatus tl_unpack_create_chat(TLPacket *tl_packet, PacketCreateChat **packet_create_chat)
+PacketParseStatus tl_unpack_create_chat(TlPacket *tl_packet, PacketCreateChat **packet_create_chat)
 {
     bool new_packet = false;
     PacketCreateChat *result = nullptr;
@@ -123,7 +123,7 @@ void delete_packet_create_chat(PacketCreateChat *packet_create_chat)
     free(packet_create_chat);
 }
 
-PacketParseStatus tl_unpack_server_respond(TLPacket *tl_packet, PacketServerRespond **packet_server_respond)
+PacketParseStatus tl_unpack_server_respond(TlPacket *tl_packet, PacketServerRespond **packet_server_respond)
 {
     bool new_packet = false;
     PacketServerRespond *result = nullptr;

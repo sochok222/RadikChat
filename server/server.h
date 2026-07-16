@@ -22,7 +22,7 @@ typedef struct sPerIOContext
     DWORD           sent_bytes;
     IO_Operation    io_operation;
     SOCKET          socket_accept;
-    TLPacket        *tl_packet;
+    TlPacket        *tl_packet;
 
     struct sPerIOContext *io_context_forward;
 } PerIOContext;

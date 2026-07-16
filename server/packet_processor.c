@@ -3,7 +3,7 @@
 #include <debug.h>
 #include <tl_packet.h>
 
-PacketServerRespond *process_login_packet(TLPacket *tl_packet, PerSocketContext *per_socket_context)
+PacketServerRespond *process_login_packet(TlPacket *tl_packet, PerSocketContext *per_socket_context)
 {
     DBG_FUNC();
 
@@ -60,7 +60,7 @@ ServerRespond process_create_chat_packet(PacketCreateChat *client)
 //     int         requestId;
 //     char        *nickname;
 //     size_t      readPos = 0;
-//     TLPacket      in, out;
+//     TlPacket      in, out;
 //     in.data = NULL; out.data = NULL;
 //
 //     in = packet_from_bytes(client->buffer);
@@ -113,7 +113,7 @@ void process_message_packet(PacketMessage *packet_message)
     // int         requestId;
     // char        *nickname, *message;
     // size_t      readPos = 0;
-    // TLPacket      in, toSender;
+    // TlPacket      in, toSender;
     // in.data = NULL; toSender.data = NULL;
     //
     // in = packet_from_bytes(client->buffer);

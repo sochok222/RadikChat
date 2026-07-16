@@ -226,10 +226,10 @@ DWORD WINAPI worker_thread(LPVOID arg)
                     // received tl_packet is not needed anymore
                     delete_tl_packet(tl_packet);
 
-                    // Packing respond packet
+                    // Pack respond packet
                     tl_pack_server_respond(respond_packet);
 
-                    // Creating io context and moving packet data to its buffer
+                    // Creat io context and moving packet data to its buffer
                     PerIOContext *send_io_context = allocate_io_context();
                     send_io_context->io_operation = IO_OP_WRITE;
                     send_io_context->total_bytes = respond_packet->tl_packet->size;
@@ -239,7 +239,7 @@ DWORD WINAPI worker_thread(LPVOID arg)
                     send_io_context->tl_packet = respond_packet->tl_packet;
                     memcpy(send_io_context->buffer, respond_packet->tl_packet->data, respond_packet->tl_packet->size);
 
-                    // Posting send event
+                    // Post send event
                     n_ret = WSASend(per_socket_context->socket, &(send_io_context->wsabuf), 1,
                                    &send_num_bytes, flags, &send_io_context->overlapped, NULL);
 
@@ -293,8 +293,7 @@ DWORD WINAPI worker_thread(LPVOID arg)
             SOCKET accept_socket = per_socket_context->accept_socket;
             if (accept_socket == INVALID_SOCKET) {
                 DBG_FATAL("acceptex() failed to create accept_socket: %d", GetLastError());
-                // TODO do not add socket to the global sockets list and post next acceptex
-                exit(1); // TEMPORARY
+                exit(1);
             }
 
             // Add new socket to the IOCP
@@ -307,7 +306,7 @@ DWORD WINAPI worker_thread(LPVOID arg)
 
             // Post initial receive on new socket
             n_ret = WSARecv(accept_socket, &(new_connection_socket_context->io_context->wsabuf),
-                           1, &recv_num_bytes, &flags,
+                           1, NULL, &flags,
                            &(new_connection_socket_context->io_context->overlapped), NULL);
             if (n_ret == SOCKET_ERROR && ERROR_IO_PENDING != WSAGetLastError()) {
                 DBG_FATAL("WSARecv() failed: %d", WSAGetLastError());

@@ -19,7 +19,7 @@ HANDLE socket_server_mutex;
 HANDLE notifications_semaphore;
 HANDLE notification_thread_run_mutex;
 
-static TLPacket handle_new_message(TLPacket p);
+static TlPacket handle_new_message(TlPacket p);
 
 void init_client_utils()
 {
@@ -69,7 +69,7 @@ void socket_thread(void*)
             continue;
 
         // if (*(int*)(readBuffer + PACKET_TYPE_OFFSET) == TYPE_DELIVERY) {
-        //     TLPacket notification, respond;
+        //     TlPacket notification, respond;
         //     DBG_INFO("Received a notification");
         //     notification = packet_from_bytes(readBuffer);
         //     respond = handle_new_message(notification);
@@ -83,7 +83,7 @@ void socket_thread(void*)
         //     continue;
         // }
 
-        TLPacket *tl_packet = NULL;
+        TlPacket *tl_packet = NULL;
         PacketParseStatus parse_status;
         if ((parse_status = packet_from_bytes(read_buffer, &tl_packet)) != PKT_PARSE_OK) {
             DBG_ERROR("Failed to parse packet (%d)", parse_status);
@@ -115,7 +115,7 @@ void send_message_thread(void *args)
 //     SOCKET          serverSocket = ((SendMessageThreadArg*)args)->socket;
 //     Request  *request = NULL;
 //     int             respond;
-//     TLPacket          pIn = {0}, pOut = {0};
+//     TlPacket          pIn = {0}, pOut = {0};
 //
 //     if (contact == NULL) {
 //         DBG_ERROR("Contact is null");
@@ -180,9 +180,9 @@ void send_message_thread(void *args)
 //     free(args);
 // }
 //
-// static TLPacket handle_new_message(TLPacket messagePacket)
+// static TlPacket handle_new_message(TlPacket messagePacket)
 // {
-//     TLPacket respond = createPacket(TYPE_RESPOND, CMD_MESSAGE, SERV_RESPOND_FAILURE, messagePacket.id);
+//     TlPacket respond = createPacket(TYPE_RESPOND, CMD_MESSAGE, SERV_RESPOND_FAILURE, messagePacket.id);
 //     char *senderNickname, *receivedMessage;
 //     size_t readPos = 0;
 //     Contact *contact = contacts;

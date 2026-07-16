@@ -14,7 +14,7 @@ typedef struct sPendingRequest
     HANDLE mutex;
     HANDLE event;
 
-    TLPacket *packet;
+    TlPacket *packet;
 } Request;
 
 typedef struct sRequestSlot
@@ -27,7 +27,7 @@ typedef struct sRequestSlot
 void            init_requests(void);
 Request         *create_request(void);
 void            delete_request(Request *request);
-void            associate_request(TLPacket *packet, Request *request);
+void            associate_request(TlPacket *packet, Request *request);
 
 extern RequestSlot  g_requests_slots[MAX_PENDING_REQUESTS];
 

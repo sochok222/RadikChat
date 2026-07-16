@@ -65,7 +65,7 @@ void delete_request(Request *request)
     free(request);
 }
 
-void associate_request(TLPacket *packet, Request *request)
+void associate_request(TlPacket *packet, Request *request)
 {
     tl_packet_set_id(packet, request->id);
     tl_packet_set_gen(packet, g_requests_slots[request->id].gen);
