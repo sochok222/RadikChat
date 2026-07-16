@@ -169,14 +169,9 @@ DWORD WINAPI worker_thread(LPVOID arg)
     LPWSAOVERLAPPED overlapped = NULL;
     PerSocketContext *per_socket_context = NULL;
     PerIOContext *per_io_context = NULL;
-    WSABUF buff_recv;
-    WSABUF buff_send;
-    DWORD recv_num_bytes = 0;
-    DWORD send_num_bytes = 0;
     DWORD flags = 0;
     DWORD io_size = 0;
     PacketParseStatus parse_status;
-    ServerRespond respond;
 
     while (true) {
         success = GetQueuedCompletionStatus(IOCP, &io_size,
@@ -241,7 +236,7 @@ DWORD WINAPI worker_thread(LPVOID arg)
 
                     // Post send event
                     n_ret = WSASend(per_socket_context->socket, &(send_io_context->wsabuf), 1,
-                                   &send_num_bytes, flags, &send_io_context->overlapped, NULL);
+                                   NULL, flags, &send_io_context->overlapped, NULL);
 
                     delete_packet_server_respond(respond_packet);
 
@@ -258,7 +253,7 @@ DWORD WINAPI worker_thread(LPVOID arg)
 
             // Post receive
             WSARecv(per_socket_context->socket, &(per_socket_context->io_context->wsabuf),
-                       1, &recv_num_bytes, &flags,
+                       1, NULL, &flags,
                        &(per_socket_context->io_context->overlapped), NULL);
             break;
 
@@ -269,11 +264,11 @@ DWORD WINAPI worker_thread(LPVOID arg)
 
             if (per_io_context->sent_bytes < per_io_context->total_bytes) {
                 // Previous IO operation sent not all bytes, post another WSASend
-                buff_send.buf = per_io_context->buffer + per_io_context->sent_bytes;
-                buff_send.len = per_io_context->total_bytes - per_io_context->sent_bytes;
+                per_io_context->wsabuf.buf = per_io_context->buffer + per_io_context->sent_bytes;
+                per_io_context->wsabuf.len = per_io_context->total_bytes - per_io_context->sent_bytes;
 
-                n_ret = WSASend(per_socket_context->socket, &buff_send, 1,
-                               &send_num_bytes, flags, &per_io_context->overlapped, NULL);
+                n_ret = WSASend(per_socket_context->socket, &per_io_context->wsabuf, 1,
+                               NULL, flags, &per_io_context->overlapped, NULL);
                 if (n_ret == SOCKET_ERROR && ERROR_IO_PENDING != WSAGetLastError()) {
                     DBG_ERROR("Thread(%lu) WSASend failed\n", GetCurrentThreadId(), WSAGetLastError());
                     close_client(per_socket_context, false);
