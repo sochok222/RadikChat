@@ -34,7 +34,7 @@ typedef struct sPacketMessage
 } PacketMessage;
 
 // * Unpack - allocate new typed packet and assign transport-layer packet as child to it (tl is freed with typed packet).
-// If packet is nullptr means that it will be allocated too.
+// If TlPacket is nullptr means that it will be allocated too.
 // * Pack   - place all typed packet data into tl-packet's payload
 PacketParseStatus tl_unpack_login(TlPacket *tl_packet, PacketLogin **packet_login);
 #define create_login_packet(packet_login) (tl_unpack_login(NULL, packet_login))

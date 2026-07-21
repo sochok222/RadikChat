@@ -14,6 +14,7 @@
 #include "console_input.h"
 #include "console_output.h"
 #include "contacts_manager.h"
+#include "miscellaneous.h"
 #include "packet.h"
 
 #include <process.h>
@@ -152,7 +153,7 @@ void open_chat(const Contact *contact)
     DBG_FUNC();
     char input_buffer[100];
     char ch;
-    HANDLE chat_update_thread_handle;
+    HANDLE chat_update_thread_handle = INVALID_HANDLE_VALUE;
     ChatUpdateThreadArg chat_update_arg;
 
     print_contact_name("Chat with %s:", contact->nickname);
@@ -172,6 +173,8 @@ void open_chat(const Contact *contact)
             continue;
         if (strcmp(input_buffer, "/quit") == 0) {
             TerminateThread(chat_update_thread_handle, 0);
+            safe_close_handle(chat_update_thread_handle);
+            safe_close_handle(chat_update_arg.start_from_mutex);
             clear_screen();
             return;
         }
@@ -205,6 +208,9 @@ void open_chat(const Contact *contact)
             input_buffer[0] = '\0';
             continue;
         }
+        TerminateThread(chat_update_thread_handle, 0);
+        safe_close_handle(chat_update_thread_handle);
+        safe_close_handle(chat_update_arg.start_from_mutex);
         send_message(socket_server, contact, input_buffer);
     }
 }

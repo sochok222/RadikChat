@@ -15,9 +15,9 @@
 
 static fd_set fd_clients;
 
-HANDLE socket_server_mutex;
-HANDLE notifications_semaphore;
-HANDLE notification_thread_run_mutex;
+HANDLE socket_server_mutex = INVALID_HANDLE_VALUE;
+HANDLE notifications_semaphore = INVALID_HANDLE_VALUE;
+HANDLE notification_thread_run_mutex = INVALID_HANDLE_VALUE;
 
 static TlPacket handle_new_message(TlPacket p);
 

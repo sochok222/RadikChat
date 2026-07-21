@@ -168,7 +168,7 @@ DWORD WINAPI worker_thread(LPVOID arg)
     int n_ret = 0;
     LPWSAOVERLAPPED overlapped = NULL;
     PerSocketContext *per_socket_context = NULL;
-    PerIOContext *per_io_context = NULL;
+    PerIoContext *per_io_context = NULL;
     DWORD flags = 0;
     DWORD io_size = 0;
     PacketParseStatus parse_status;
@@ -181,7 +181,7 @@ DWORD WINAPI worker_thread(LPVOID arg)
 
         if (!success) {
             // Not always mean error
-            DBG_INFO("Thread (%d) GetQueuedCompletionStatus() failed: %d", GetCurrentThreadId(), GetLastError());
+            DBG_INFO("Thread (%llu) GetQueuedCompletionStatus() failed: %d", GetCurrentThreadId(), GetLastError());
         }
 
         if (per_socket_context == NULL) {
@@ -190,15 +190,15 @@ DWORD WINAPI worker_thread(LPVOID arg)
             return 0;
         }
 
-        per_io_context = (PerIOContext*)overlapped;
+        per_io_context = (PerIoContext*)overlapped;
         if ( (!success || (success == true && io_size == 0)) && per_io_context->io_operation != IO_OP_ACCEPT ) {
-            DBG_WARNING("Thread (%d) IOSize == 0, Error code (%d)");
+            DBG_WARNING("Thread (%llu) IOSize == 0, Error code (%d)");
             log_wsa_error(WSAGetLastError());
             close_client(per_socket_context, false);
             continue;
         }
 
-        // Determine what type of IO packet has completed
+        // Determine type of IO operation
         switch (per_io_context->io_operation) {
         case IO_OP_READ: // TODO handle partial read
             // A read operation has completed, process received packet and post another action on the socket
@@ -357,7 +357,7 @@ PerSocketContext *update_completion_port(SOCKET socket, IO_Operation client_io, 
     return per_socket_context;
 }
 
-PerSocketContext *allocate_socket_context(SOCKET socket, IO_Operation client_io)
+PerSocketContext *allocate_socket_context(SOCKET socket, IoOperation client_io)
 {
     DBG_FUNC();
     PerSocketContext *per_socket_context = NULL;
@@ -383,19 +383,16 @@ PerSocketContext *allocate_socket_context(SOCKET socket, IO_Operation client_io)
             per_socket_context->io_context->io_context_forward = NULL;
             per_socket_context->io_context->total_bytes = 0;
             per_socket_context->io_context->sent_bytes  = 0;
-            per_socket_context->io_context->tl_packet = NULL;
             per_socket_context->io_context->wsabuf.buf  = per_socket_context->io_context->buffer;
             per_socket_context->io_context->wsabuf.len  = sizeof(per_socket_context->io_context->buffer);
 
             ZeroMemory(per_socket_context->io_context->wsabuf.buf, per_socket_context->io_context->wsabuf.len);
         } else {
-            DBG_FATAL("malloc PerIOContext failed");
+            DBG_FATAL("malloc PerIoContext failed");
         }
     } else {
         DBG_FATAL("malloc PerSocketContext failed");
     }
-
-    InitializeCriticalSection(&per_socket_context->io_critical_section);
 
     LeaveCriticalSection(g_critical_section);
 

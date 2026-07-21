@@ -23,13 +23,8 @@
 #include "../lib/global_values/global_values.h"
 #include "client_database.h"
 #include "request.h"
-
-#define BUFSIZE 1024
-#define SERVER_ADDRESS "192.168.0.184"
-#define SERVER_PORT "1423"
-
 SOCKET  socket_server = INVALID_SOCKET;
-HANDLE  socket_thread_run_mutex;
+HANDLE  socket_thread_run_mutex = INVALID_HANDLE_VALUE;
 AppData app_data;
 
 static void init_console(void)
@@ -49,7 +44,7 @@ int main(void)
 {
     WSADATA wsadata;
     int     choice;
-    HANDLE  socket_thread_mutex;
+    HANDLE  socket_thread_mutex = INVALID_HANDLE_VALUE;
     app_data.contact_count = 0;
     app_data.message_event = CreateEvent(NULL, FALSE, FALSE, NULL);
 
@@ -119,6 +114,8 @@ reconnect:
     disable_selection(false);
     if (socket_server != INVALID_SOCKET)
         closesocket(socket_server);
+    deinit_output();
+    deinit_debug();
 
     // Wait while thread stops
     ReleaseMutex(socket_thread_run_mutex);

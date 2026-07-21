@@ -21,4 +21,5 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         Types
         PendingOperation
         ClientDatabase
+        Miscellaneous
 )

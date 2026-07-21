@@ -8,7 +8,7 @@
 #define MAX_MESSAGE_LEN 250
 #define MAX_RETRIES 10
 
-#define MAX_PACKET_SIZE (1024 * 1024) // 5KB per packet
+#define MAX_PACKET_SIZE ((uint32_t)(1024 * 2)) // 2KB per packet
 
 #define PKT_SIZE_OFFSET (0)
 
@@ -72,7 +72,7 @@ typedef uint32_t TlPacketCommand;
 typedef uint64_t TlPacketId;        // 32 lower bits - actual id, 32 higher bits - generation
 typedef uint32_t TlPacketCapacity;  // Not used in protocol
 
-typedef struct sTLPacket // TL - transport layer
+typedef struct TlPacket // Tl - transport layer
 {
     TlPacketSize        size;
     TlPacketCommand     command;
