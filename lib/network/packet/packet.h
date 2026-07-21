@@ -2,56 +2,56 @@
 #define RADIKCHAT_PACKET_H
 #include "tl_packet.h"
 
-typedef uint64_t receiver_id;
+typedef uint64_t receiverId;
 
-typedef struct sPacketLogin
+typedef struct PacketBase
 {
-    TlPacket    *tl_packet;
+    TlPacketId packet_id;
+} PacketBase;
+
+typedef struct LoginPacket
+{
+    PacketBase  base;
     uint16_t    nickname_len; // len + null char
     uint16_t    nickname_capacity;
     char        *nickname;
-} PacketLogin;
+} LoginPacket;
 
-typedef struct sPacketCreateChat
+typedef struct CreateChatPacket
 {
-    TlPacket *tl_packet;
-    receiver_id receiver_id;
-} PacketCreateChat;
+    PacketBase  base;
+    receiverId  receiver_id;
+} CreateChatPacket;
 
-typedef struct sPacketServerRespond
+typedef struct ServerRespondPacket
 {
-    TlPacket        *tl_packet;
+    PacketBase      base;
     ServerRespond   status;
-} PacketServerRespond;
+} ServerRespondPacket;
 
-typedef struct sPacketMessage
+typedef struct MessagePacket
 {
-    TlPacket    *tl_packet;
+    PacketBase  base;
     uint8_t     to_chat;
-    receiver_id receiver_id;
+    receiverId  receiver_id;
     size_t      message_len;
     char        *message;
-} PacketMessage;
+} MessagePacket;
 
-// * Unpack - allocate new typed packet and assign transport-layer packet as child to it (tl is freed with typed packet).
-// If TlPacket is nullptr means that it will be allocated too.
-// * Pack   - place all typed packet data into tl-packet's payload
-PacketParseStatus tl_unpack_login(TlPacket *tl_packet, PacketLogin **packet_login);
-#define create_login_packet(packet_login) (tl_unpack_login(NULL, packet_login))
-inline void tl_pack_login(PacketLogin *packet_login);
-void login_set_nickname(PacketLogin *packet_login, char *nickname);
-inline void delete_packet_login(PacketLogin *packet_login);
+LoginPacket         *allocate_login_packet();
+TlPacket            *serialize_login_packet(const LoginPacket *login_packet);
+PacketParseStatus   deserialize_login_packet(const TlPacket *tl_packet, LoginPacket **login_packet);
+void                delete_login_packet(LoginPacket *login_packet);
+void                login_packet_set_nickname(LoginPacket *login_packet, const char *nickname);
 
-PacketParseStatus tl_unpack_create_chat(TlPacket *tl_packet, PacketCreateChat **packet_create_chat);
-#define create_create_chat_packet(packet_create_chat) (tl_unpack_create_chat(NULL, packet_create_chat))
-inline void tl_pack_create_chat(PacketCreateChat *packet_create_chat);
-inline void create_chat_set_receiver_id(PacketCreateChat *packet_create_chat, receiver_id receiverID);
-inline void delete_packet_create_chat(PacketCreateChat *packet_create_chat);
+CreateChatPacket    *allocate_create_chat_packet();
+TlPacket            *serialize_create_chat_packet(const CreateChatPacket *create_chat_packet);
+PacketParseStatus   deserialize_create_chat_packet(const TlPacket *tl_packet, CreateChatPacket **create_chat_packet);
+void                delete_create_chat_packet(CreateChatPacket *create_chat_packet);
 
-PacketParseStatus tl_unpack_server_respond(TlPacket *tl_packet, PacketServerRespond **packet_server_respond);
-#define create_server_respond_packet(packet_server_respond) (tl_unpack_server_respond(packet_server_respond, NULL))
-inline void tl_pack_server_respond(PacketServerRespond *packet_server_respond);
-inline void server_respond_set_respond(PacketServerRespond *packet_server_respond, uint16_t status);
-inline void delete_packet_server_respond(PacketServerRespond *packet_server_respond);
+ServerRespondPacket *allocate_server_respond_packet();
+TlPacket            *serialize_server_respond_packet(const ServerRespondPacket *server_respond_packet);
+PacketParseStatus   deserialize_server_respond_packet(const TlPacket *tl_packet, ServerRespondPacket **server_respond_packet);
+void                delete_server_respond_packet(ServerRespondPacket *server_respond_packet);
 
 #endif //RADIKCHAT_PACKET_H

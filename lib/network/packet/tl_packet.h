@@ -31,16 +31,16 @@ enum PacketCommand
 
 enum ServerRespond
 {
-    SERV_RESPOND_OK = 0,
-    SERV_RESPOND_FAILURE,
-    SERV_RESPOND_CANT_PARSE,
-    SERV_RESPOND_NOT_FOUND,
-    SERV_RESPOND_ALREADY_EXISTS,
-    SERV_RESPOND_SERVER_ERROR,
-    SERV_RESPOND_SIZE_MISMATCH,
-    SERV_RESPOND_ACTION_TO_HIMSELF, // Client tries to create chat or send message to himself
-    SERV_RESPOND_NICKNAME_TOO_SHORT,
-    SERV_RESPOND_NICKNAME_TOO_LONG,
+    SERVER_RESPOND_OK = 0,
+    SERVER_RESPOND_FAILURE,
+    SERVER_RESPOND_CANT_PARSE,
+    SERVER_RESPOND_NOT_FOUND,
+    SERVER_RESPOND_ALREADY_EXISTS,
+    SERVER_RESPOND_SERVER_ERROR,
+    SERVER_RESPOND_SIZE_MISMATCH,
+    SERVER_RESPOND_ACTION_TO_HIMSELF, // Client tries to create chat or send message to himself
+    SERVER_RESPOND_NICKNAME_TOO_SHORT,
+    SERVER_RESPOND_NICKNAME_TOO_LONG,
 };
 typedef uint16_t ServerRespond;
 
@@ -60,6 +60,10 @@ static enum PacketFieldType
     PKT_F_UINT16,
     PKT_F_UINT32,
     PKT_F_UINT64,
+    PKT_F_INT8,
+    PKT_F_INT16,
+    PKT_F_INT32,
+    PKT_F_INT64
 } PacketFieldType;
 
 // TODO
@@ -83,19 +87,36 @@ typedef struct TlPacket // Tl - transport layer
 
 const char *get_parse_status_string(PacketParseStatus parse_status);
 
-[[nodiscard]] TlPacket          *alloc_tl_packet();
-[[nodiscard]] PacketParseStatus packet_from_bytes(uint8_t *data, TlPacket **packet);
+[[nodiscard]] TlPacket          *allocate_tl_packet();
+[[nodiscard]] PacketParseStatus packet_from_raw_data(uint8_t *data, TlPacket **packet);
 
-PacketParseStatus read_packet_field(int field_type, TlPacket *packet, uint32_t *read_pos, void *out);
-void tl_pack_data(int field_type, TlPacket *packet, const void *data);
+PacketParseStatus   read_packet_field(int field_type, const TlPacket *packet, uint32_t *read_pos, void *out, size_t out_size);
+void                tl_pack_data(int field_type, TlPacket *packet, const void *data);
 
 void delete_tl_packet(TlPacket *packet);
 void send_packet(SOCKET socket, TlPacket packet, HANDLE *socket_mutex);
 void tl_pack_header(TlPacket *packet);
 
-inline uint16_t tl_packet_get_id(TlPacket *packet);
-inline uint16_t tl_packet_get_gen(TlPacket *packet);
-inline void     tl_packet_set_id(TlPacket *packet, uint16_t id);
-inline void     tl_packet_set_gen(TlPacket *packet, uint16_t gen);
+static inline uint16_t tl_packet_get_id(TlPacket *packet)
+{
+    return packet->id & 0xFFFF;
+}
+
+static inline uint16_t tl_packet_get_gen(TlPacket *packet)
+{
+    return packet->id >> 16;
+}
+
+static inline void tl_packet_set_id(TlPacket *packet, uint16_t id)
+{
+    packet->id &= ~0xFFFF;
+    packet->id |= id;
+}
+
+static inline void tl_packet_set_gen(TlPacket *packet, uint16_t gen)
+{
+    packet->id &= ~0xFFFF0000;
+    packet->id |= (gen << 16);
+}
 
 #endif //RADIKCHAT_NETWORKTYPES_H

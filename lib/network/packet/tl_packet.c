@@ -17,7 +17,7 @@
 
 static inline size_t get_size_of_type(int file_type);
 
-TlPacket *alloc_tl_packet()
+TlPacket *allocate_tl_packet()
 {
     TlPacket *packet = malloc(sizeof(*packet));
     if (packet == nullptr) {
@@ -32,7 +32,7 @@ TlPacket *alloc_tl_packet()
     return packet;
 }
 
-PacketParseStatus packet_from_bytes(uint8_t *data, TlPacket **packet)
+PacketParseStatus packet_from_raw_data(uint8_t *data, TlPacket **packet)
 {
     TlPacket *result;
     if ((result = malloc(sizeof(*result))) == nullptr) {
@@ -132,7 +132,11 @@ void tl_pack_data(int field_type, TlPacket *packet, const void *data)
         field_size = get_size_of_type(field_type);
 
     if (packet->size + field_size > packet->capacity) {
-        packet->data = realloc(packet->data, packet->size + field_size + 10); // NOTE + 10 is temporary solution
+        packet->data = realloc(packet->data, packet->size + field_size); // NOTE + 10 is temporary solution
+        if (packet->data == NULL) {
+            DBG_FATAL("Can't reallocate memory for data");
+            exit(1);
+        }
         packet->capacity = packet->size + field_size;
     }
     if (field_type == PKT_F_STRING) {
@@ -146,7 +150,7 @@ void tl_pack_data(int field_type, TlPacket *packet, const void *data)
     packet->size += field_size;
 }
 
-PacketParseStatus read_packet_field(int field_type, TlPacket *packet, uint32_t *read_pos, void *out)
+PacketParseStatus read_packet_field(int field_type, const TlPacket *packet, uint32_t *read_pos, void *out, size_t out_size)
 {
     size_t field_size;
     if (*read_pos == 0) {
@@ -160,7 +164,14 @@ PacketParseStatus read_packet_field(int field_type, TlPacket *packet, uint32_t *
         field_size = *(size_t*)(packet->data + *read_pos + PKT_F_STR_LEN_OFFSET);
         if (packet->size - *read_pos < field_size)
             return PKT_PARSE_SIZE_MISMATCH;
-        *((char**)out) = (char*)(packet->data + *read_pos + PKT_F_STRING_OFFSET);
+        if (out_size < field_size) {
+            *(char**)out = realloc(*(char**)out, field_size);
+            if (*(char**)out == nullptr) {
+                DBG_FATAL("Can`t reallocate memory for data");
+                exit(1);
+            }
+        }
+        strncpy(*(char**)out, (char*)packet->data + *read_pos + PKT_F_STRING_OFFSET, field_size);
         break;
     case PKT_F_UINT8:
         *((uint8_t*)out) = *(uint8_t*)(packet->data + *read_pos);
@@ -209,26 +220,4 @@ const char *get_parse_status_string(PacketParseStatus parse_status)
     default:
         return "unknown parse status";
     }
-}
-
-uint16_t tl_packet_get_id(TlPacket *packet)
-{
-    return packet->id & 0xFFFF;
-}
-
-uint16_t tl_packet_get_gen(TlPacket *packet)
-{
-    return packet->id >> 16;
-}
-
-void tl_packet_set_id(TlPacket *packet, uint16_t id)
-{
-    packet->id &= ~0xFFFF;
-    packet->id |= id;
-}
-
-void tl_packet_set_gen(TlPacket *packet, uint16_t gen)
-{
-    packet->id &= ~0xFFFF0000;
-    packet->id |= (gen << 16);
 }

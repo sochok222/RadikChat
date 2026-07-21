@@ -3,22 +3,20 @@
 #include <debug.h>
 #include <tl_packet.h>
 
-PacketServerRespond *process_login_packet(TlPacket *tl_packet, PerSocketContext *per_socket_context)
+ServerRespondPacket *process_login_packet(TlPacket *tl_packet, PerSocketContext *per_socket_context)
 {
     DBG_FUNC();
 
+    ServerRespondPacket *respond_packet = allocate_server_respond_packet();
+    respond_packet->base.packet_id = tl_packet->id;
+
+    // Try to deserialize login packet
+    LoginPacket *login_packet;
     PacketParseStatus parse_status;
-    PacketLogin *packet_login;
-
-    // Create respond packet (check of parse status is not needed because packet is created)
-    PacketServerRespond *respond;
-    tl_unpack_server_respond(nullptr, &respond);
-
-    // Try to unpack login packet
-    if ((parse_status = tl_unpack_login(tl_packet, &packet_login)) != PKT_PARSE_OK) {
+    if ((parse_status = deserialize_login_packet(tl_packet, &login_packet)) != PKT_PARSE_OK) {
         DBG_ERROR("Failed to parse login packet: %s", get_parse_status_string(parse_status));
-        server_respond_set_respond(respond, SERV_RESPOND_CANT_PARSE);
-        return respond;
+        respond_packet->status = SERVER_RESPOND_CANT_PARSE;
+        return respond_packet;
     }
 
     // Search if client with this nickname already registered
@@ -26,35 +24,39 @@ PacketServerRespond *process_login_packet(TlPacket *tl_packet, PerSocketContext 
     PerSocketContext *it = g_clients;
     while (it != NULL) {
         if (it->nickname != NULL &&
-            strcmp(it->nickname, packet_login->nickname) == 0) {
-            DBG_DEBUG("Found client already registered with same nickname %s", packet_login->nickname);
-            server_respond_set_respond(respond, SERV_RESPOND_ALREADY_EXISTS);
-            return respond;
+            strcmp(it->nickname, login_packet->nickname) == 0) {
+            DBG_DEBUG("Found client already registered with same nickname %s", login_packet->nickname);
+            respond_packet->status = SERVER_RESPOND_ALREADY_EXISTS;
+
+            delete_login_packet(login_packet);
+            return respond_packet;
         }
         it = it->ctxt_forward;
     }
 
     // Check if nickname has enough length
-    if (strlen(packet_login->nickname) == 0) {
+    if (strlen(login_packet->nickname) == 0) {
         DBG_INFO("Nickname has 0 length");
-        server_respond_set_respond(respond, SERV_RESPOND_NICKNAME_TOO_SHORT);
-        return respond;
+        respond_packet->status =  SERVER_RESPOND_NICKNAME_TOO_SHORT;
+
+        delete_login_packet(login_packet);
+        return respond_packet;
     }
 
     // Saving nickname
-    per_socket_context->nickname = malloc(sizeof(char)*(strlen(packet_login->nickname)+1));
-    strcpy(per_socket_context->nickname, packet_login->nickname);
+    per_socket_context->nickname = malloc(sizeof(char)*(strlen(login_packet->nickname)+1));
+    strcpy(per_socket_context->nickname, login_packet->nickname);
 
     // free allocated data
-    delete_packet_login(packet_login);
+    delete_login_packet(login_packet);
 
-    server_respond_set_respond(respond, SERV_RESPOND_OK);
-    return respond;
+    respond_packet->status = SERVER_RESPOND_OK;
+    return respond_packet;
 }
 
-ServerRespond process_create_chat_packet(PacketCreateChat *client)
+ServerRespond process_create_chat_packet(CreateChatPacket *client)
 {
-    return SERV_RESPOND_OK;
+    return SERVER_RESPOND_OK;
 //     DBG_FUNC();
 //     ClientInfo  *it;
 //     int         requestId;
@@ -63,14 +65,14 @@ ServerRespond process_create_chat_packet(PacketCreateChat *client)
 //     TlPacket      in, out;
 //     in.data = NULL; out.data = NULL;
 //
-//     in = packet_from_bytes(client->buffer);
+//     in = packet_from_raw_data(client->buffer);
 //     if (in.data == NULL) {
 //         DBG_ERROR("in.data is NULL");
 //         return;
 //     }
 //
 //     requestId = *(int*)(client->buffer + PKT_ID_OFFSET);
-//     out = createPacket(TYPE_RESPOND, CMD_CREATE_CHAT, SERV_RESPOND_FAILURE, requestId);
+//     out = createPacket(TYPE_RESPOND, CMD_CREATE_CHAT, SERVER_RESPOND_FAILURE, requestId);
 //     if (out.data == NULL) {
 //         DBG_ERROR("out.data is NULL");
 //         deletePacket(in);
@@ -79,13 +81,13 @@ ServerRespond process_create_chat_packet(PacketCreateChat *client)
 //
 //     if ((nickname = readPacketString(&in, &readPos)) == NULL) {
 //         DBG_ERROR("Can't read nickname");
-//         out.status = SERV_RESPOND_CANT_PARSE;
+//         out.status = SERVER_RESPOND_CANT_PARSE;
 //         goto send_packet;
 //     }
 //
 //     if (strcmp(client->nickname, nickname) == 0) {
 //         DBG_INFO("Client tries to create chat with himself");
-//         out.status = SERV_RESPOND_ACTION_TO_HIMSELF;
+//         out.status = SERVER_RESPOND_ACTION_TO_HIMSELF;
 //         goto send_packet;
 //     }
 //
@@ -94,19 +96,19 @@ ServerRespond process_create_chat_packet(PacketCreateChat *client)
 //     while (it != NULL) {
 //         if (strcmp(it->nickname, nickname) == 0) {
 //             DBG_INFO("Found needed client");
-//             out.status = SERV_RESPOND_OK;
+//             out.status = SERVER_RESPOND_OK;
 //             goto send_packet;
 //         }
 //         it = it->next;
 //     }
-//     out.status = SERV_RESPOND_NOT_FOUND;
+//     out.status = SERVER_RESPOND_NOT_FOUND;
 //
 // send_packet:
 //     send_packet(client->socket, out, NULL);
 //     deletePacket(in); deletePacket(out);
 }
 
-void process_message_packet(PacketMessage *packet_message)
+void process_message_packet(MessagePacket *packet_message)
 {
     // DBG_FUNC();
     // ClientInfo  *it;
@@ -116,7 +118,7 @@ void process_message_packet(PacketMessage *packet_message)
     // TlPacket      in, toSender;
     // in.data = NULL; toSender.data = NULL;
     //
-    // in = packet_from_bytes(client->buffer);
+    // in = packet_from_raw_data(client->buffer);
     // if (in.data == NULL) {
     //     DBG_ERROR("in.data is NULL");
     //     if (in.parseError == PARSE_ERROR_MALLOC_FAILED) {
@@ -128,11 +130,11 @@ void process_message_packet(PacketMessage *packet_message)
     // }
     //
     // requestId = *(int*)(client->buffer + PKT_ID_OFFSET);
-    // toSender = createPacket(TYPE_RESPOND, CMD_MESSAGE, SERV_RESPOND_FAILURE, requestId);
+    // toSender = createPacket(TYPE_RESPOND, CMD_MESSAGE, SERVER_RESPOND_FAILURE, requestId);
     //
     // if ((nickname = readPacketString(&in, &readPos)) == NULL) {
     //     DBG_ERROR("Can't read nickname");
-    //     toSender.status = SERV_RESPOND_CANT_PARSE;
+    //     toSender.status = SERVER_RESPOND_CANT_PARSE;
     //     send_packet(client->socket, toSender, NULL);
     //     deletePacket(in); deletePacket(toSender);
     //     return;
@@ -140,7 +142,7 @@ void process_message_packet(PacketMessage *packet_message)
     //
     // if ((message = readPacketString(&in, &readPos)) == NULL) {
     //     DBG_ERROR("Can't read message");
-    //     toSender.status = SERV_RESPOND_CANT_PARSE;
+    //     toSender.status = SERVER_RESPOND_CANT_PARSE;
     //     send_packet(client->socket, toSender, NULL);
     //     deletePacket(in); deletePacket(toSender);
     //     return;
@@ -157,16 +159,16 @@ void process_message_packet(PacketMessage *packet_message)
     // }
     // if (it == NULL) {
     //     DBG_ERROR("Can't find client\n");
-    //     toSender.status = SERV_RESPOND_NOT_FOUND;
+    //     toSender.status = SERVER_RESPOND_NOT_FOUND;
     // }
     //
     // if (it != NULL && send_message(client, it, message) == true) {
     //     DBG_INFO("Message sent successfully\n");
-    //     toSender.status = SERV_RESPOND_OK;
+    //     toSender.status = SERVER_RESPOND_OK;
     // }
     // else {
     //     DBG_INFO("Failed to send message\n");
-    //     toSender.status = SERV_RESPOND_FAILURE;
+    //     toSender.status = SERVER_RESPOND_FAILURE;
     // }
     //
     // send_packet(client->socket, toSender, NULL);

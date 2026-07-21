@@ -17,7 +17,7 @@ typedef enum IoOperation
 typedef struct PerIoContext
 {
     WSAOVERLAPPED   overlapped;
-    char            buffer[MAX_BUFFER_SIZE];
+    uint8_t         buffer[MAX_BUFFER_SIZE];
     WSABUF          wsabuf;
     DWORD           total_bytes;
     DWORD           sent_bytes;
